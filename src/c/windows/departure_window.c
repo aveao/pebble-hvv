@@ -1,13 +1,18 @@
 #include "departure_window.h"
 #include "../modules/data.h"
+#include "../modules/comm.h"
 #include "../modules/icons.h"
+
+// Defined in main.c
+extern void app_start_departure_refresh(void);
+extern void app_stop_departure_refresh(void);
 
 #define ROW_HEIGHT 28
 #define BADGE_HEIGHT 18
 #define BADGE_WIDTH 28
 #define BADGE_MARGIN 3
 #define MINS_WIDTH 30
-#define HEADER_HEIGHT 18
+#define HEADER_HEIGHT 16
 
 static Window *s_window;
 static ScrollLayer *s_scroll_layer;
@@ -132,9 +137,24 @@ static void prv_window_load(Window *window) {
 }
 
 static void prv_window_unload(Window *window) {
+  app_stop_departure_refresh();
   scroll_layer_destroy(s_scroll_layer);
   layer_destroy(s_content_layer);
   text_layer_destroy(s_loading_layer);
+  s_scroll_layer = NULL;
+  s_content_layer = NULL;
+}
+
+static void prv_window_appear(Window *window) {
+  // Request departures immediately and start refresh cycle
+  comm_request_departures();
+  app_start_departure_refresh();
+}
+
+static void prv_window_disappear(Window *window) {
+  app_stop_departure_refresh();
+  // Clear departure data so next station starts fresh
+  data_set_count(0);
 }
 
 void departure_window_push(void) {
@@ -142,6 +162,8 @@ void departure_window_push(void) {
   window_set_window_handlers(s_window, (WindowHandlers) {
     .load = prv_window_load,
     .unload = prv_window_unload,
+    .appear = prv_window_appear,
+    .disappear = prv_window_disappear,
   });
   window_stack_push(s_window, true);
 }

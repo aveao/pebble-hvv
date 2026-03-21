@@ -25,7 +25,8 @@
       "watchface": false
     },
     "capabilities": [
-      "configurable"
+      "configurable",
+      "location"
     ],
     "messageKeys": [
       "REQUEST_DEPARTURES",
@@ -35,10 +36,20 @@
       "DEP_DIR[10]",
       "DEP_MINS[10]",
       "DEP_DELAY[10]",
-      "CONFIG_STATION",
       "CONFIG_USER",
       "CONFIG_PASSWORD",
-      "ERROR_MSG"
+      "ERROR_MSG",
+      "REQUEST_STATIONS",
+      "STATION_COUNT",
+      "STATION_NAME[8]",
+      "STATION_IS_FAV[8]",
+      "STATION_DIST[8]",
+      "SELECT_STATION",
+      "FAV_1",
+      "FAV_2",
+      "FAV_3",
+      "FAV_4",
+      "FAV_5"
     ],
     "resources": {
       "media": []

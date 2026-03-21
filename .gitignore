@@ -31,3 +31,5 @@ release.properties
 
 .lock-waf_linux_build
 node_modules/
+pebble_screenshot*
+!.assets/*

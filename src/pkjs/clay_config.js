@@ -8,14 +8,41 @@ module.exports = [
     "items": [
       {
         "type": "heading",
-        "defaultValue": "Station"
+        "defaultValue": "Favorite Stops"
       },
       {
         "type": "input",
-        "messageKey": "CONFIG_STATION",
-        "label": "Station Name",
-        "defaultValue": "Jungfernstieg",
-        "description": "Enter the station name as shown on HVV.de"
+        "messageKey": "FAV_1",
+        "label": "Favorite 1",
+        "defaultValue": ""
+      },
+      {
+        "type": "input",
+        "messageKey": "FAV_2",
+        "label": "Favorite 2",
+        "defaultValue": ""
+      },
+      {
+        "type": "input",
+        "messageKey": "FAV_3",
+        "label": "Favorite 3",
+        "defaultValue": ""
+      },
+      {
+        "type": "input",
+        "messageKey": "FAV_4",
+        "label": "Favorite 4",
+        "defaultValue": ""
+      },
+      {
+        "type": "input",
+        "messageKey": "FAV_5",
+        "label": "Favorite 5",
+        "defaultValue": ""
+      },
+      {
+        "type": "text",
+        "defaultValue": "Enter station names as shown on HVV.de. Leave blank to skip."
       }
     ]
   },

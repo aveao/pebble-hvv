@@ -12,7 +12,10 @@ var TRANSIT_UBAHN = 2;
 var TRANSIT_FERRY = 3;
 var TRANSIT_UNKNOWN = 4;
 
-// Demo departure data - sent when no API credentials are configured
+// Current station for departure fetches
+var currentStation = null;
+
+// Demo departure data
 var DEMO_DEPARTURES = [
   { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Ohlstedt',         minutes: 2,  delay: 0 },
   { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Norderstedt Mitte', minutes: 4,  delay: 1 },
@@ -26,20 +29,243 @@ var DEMO_DEPARTURES = [
   { line: '73',  type: TRANSIT_FERRY, direction: 'Arningstr.',        minutes: 18, delay: 1 },
 ];
 
-function mapLineType(lineObj) {
-  // GTI line.type structure: {simpleType: "TRAIN", shortInfo: "S", longInfo: "S-Bahn"}
-  if (!lineObj || !lineObj.type) return TRANSIT_UNKNOWN;
+// ---- Helpers ----
 
+function mapLineType(lineObj) {
+  if (!lineObj || !lineObj.type) return TRANSIT_UNKNOWN;
   var lt = lineObj.type;
   var shortInfo = (lt.shortInfo || '').toUpperCase();
   var longInfo = (lt.longInfo || '').toUpperCase();
-
   if (shortInfo === 'S' || longInfo.indexOf('S-BAHN') >= 0) return TRANSIT_SBAHN;
   if (shortInfo === 'U' || longInfo.indexOf('U-BAHN') >= 0) return TRANSIT_UBAHN;
   if (shortInfo === 'BUS' || longInfo.indexOf('BUS') >= 0) return TRANSIT_BUS;
   if (longInfo.indexOf('FÄHRE') >= 0 || longInfo.indexOf('FAEHRE') >= 0 || longInfo.indexOf('SCHIFF') >= 0) return TRANSIT_FERRY;
   return TRANSIT_UNKNOWN;
 }
+
+function gtiRequest(endpoint, body, callback) {
+  var user = localStorage.getItem('gti_user');
+  var password = localStorage.getItem('gti_password');
+
+  if (!user || !password) {
+    callback(null, 'No credentials');
+    return;
+  }
+
+  var bodyStr = JSON.stringify(body);
+  var signature = hmac.signRequest(password, bodyStr);
+
+  var req = new XMLHttpRequest();
+  req.open('POST', 'https://gti.geofox.de/gti/public/' + endpoint, true);
+  req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+  req.setRequestHeader('Accept', 'application/json');
+  req.setRequestHeader('geofox-auth-user', user);
+  req.setRequestHeader('geofox-auth-signature', signature);
+  req.setRequestHeader('geofox-auth-type', 'HmacSHA1');
+
+  req.onload = function() {
+    if (req.status === 200) {
+      try {
+        callback(JSON.parse(req.responseText), null);
+      } catch (e) {
+        callback(null, 'Parse error: ' + e.message);
+      }
+    } else {
+      callback(null, 'API error ' + req.status);
+    }
+  };
+  req.onerror = function() {
+    callback(null, 'Connection error');
+  };
+  req.send(bodyStr);
+}
+
+// Emulator fallback coordinates: Hamburg Hbf
+var EMULATOR_LAT = 53.55255;
+var EMULATOR_LON = 10.0067347;
+
+function isInHamburg(lat, lon) {
+  // HVV covers Hamburg + surrounding region (roughly Cuxhaven to Lüneburg)
+  return lat >= 53.0 && lat <= 54.0 && lon >= 8.8 && lon <= 10.8;
+}
+
+function isEmulator() {
+  try {
+    var info = Pebble.getActiveWatchInfo();
+    return info && info.model && info.model.indexOf('qemu') >= 0;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getLocation(callback) {
+  var done = false;
+  function finish(lat, lon) {
+    if (done) return;
+    done = true;
+    callback(lat, lon);
+  }
+
+  // Manual timeout in case geolocation never responds
+  setTimeout(function() {
+    if (!done) {
+      if (isEmulator()) {
+        console.log('Geolocation timed out (emulator), using Hbf');
+        finish(EMULATOR_LAT, EMULATOR_LON);
+      } else {
+        console.log('Geolocation timed out');
+        finish(null, null);
+      }
+    }
+  }, 12000);
+
+  try {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      var lat = pos.coords.latitude;
+      var lon = pos.coords.longitude;
+      console.log('Got GPS: ' + lat + ', ' + lon);
+      if (isInHamburg(lat, lon)) {
+        finish(lat, lon);
+      } else if (isEmulator()) {
+        console.log('Emulator outside Hamburg, using Hbf fallback');
+        finish(EMULATOR_LAT, EMULATOR_LON);
+      } else {
+        console.log('Outside Hamburg area, no nearby stops');
+        finish(null, null);
+      }
+    }, function(err) {
+      if (isEmulator()) {
+        console.log('Geolocation error (emulator), using Hbf');
+        finish(EMULATOR_LAT, EMULATOR_LON);
+      } else {
+        console.log('Geolocation error: ' + (err && err.message));
+        finish(null, null);
+      }
+    }, { timeout: 10000 });
+  } catch (e) {
+    if (isEmulator()) {
+      console.log('Geolocation exception (emulator), using Hbf');
+      finish(EMULATOR_LAT, EMULATOR_LON);
+    } else {
+      console.log('Geolocation exception: ' + e.message);
+      finish(null, null);
+    }
+  }
+}
+
+function getFavorites() {
+  var favs = [];
+  for (var i = 1; i <= 5; i++) {
+    var name = localStorage.getItem('fav_' + i);
+    if (name && name.trim()) {
+      favs.push(name.trim());
+    }
+  }
+  return favs;
+}
+
+// ---- Station List ----
+
+function sendStationList(nearby, favorites) {
+  var dict = {};
+  var stations = [];
+
+  // Add nearby (up to 3)
+  for (var i = 0; i < nearby.length && i < 3; i++) {
+    stations.push({ name: nearby[i].name, isFav: 0, dist: nearby[i].dist });
+  }
+  // Add favorites
+  for (var j = 0; j < favorites.length && stations.length < 8; j++) {
+    stations.push({ name: favorites[j], isFav: 1, dist: 0 });
+  }
+
+  dict[keys.STATION_COUNT] = stations.length;
+  for (var k = 0; k < stations.length; k++) {
+    dict[keys.STATION_NAME + k] = stations[k].name;
+    dict[keys.STATION_IS_FAV + k] = stations[k].isFav;
+    dict[keys.STATION_DIST + k] = stations[k].dist;
+  }
+
+  Pebble.sendAppMessage(dict, function() {
+    console.log('Station list sent (' + stations.length + ' stations)');
+  }, function(e) {
+    console.log('Failed to send station list: ' + JSON.stringify(e));
+  });
+}
+
+// Demo nearby stations when no credentials
+var DEMO_NEARBY = [
+  { name: 'Jungfernstieg', dist: 12 },
+  { name: 'Hauptbahnhof', dist: 35 },
+  { name: 'Rathaus', dist: 45 },
+];
+
+function fetchStations() {
+  var favorites = getFavorites();
+  var user = localStorage.getItem('gti_user');
+
+  if (!user) {
+    console.log('No credentials, sending demo stations');
+    sendStationList(DEMO_NEARBY, favorites);
+    return;
+  }
+
+  // With credentials, skip nearby if outside Hamburg or no GPS
+
+  getLocation(function(lat, lon) {
+    if (!lat || !lon) {
+      sendStationList([], favorites);
+      return;
+    }
+
+    // Log the request for debugging
+    var checkNameBody = {
+      theName: {
+        name: 'Haltestelle',
+        type: 'STATION',
+        coordinate: {
+          x: lon,
+          y: lat
+        }
+      },
+      coordinateType: 'EPSG_4326',
+      maxList: 3,
+      maxDistance: 2550,
+      filterType: 'NO_FILTER',
+      allowTypeSwitch: true
+    };
+    gtiRequest('checkName', checkNameBody, function(resp, err) {
+      if (err) {
+        console.log('checkName error: ' + err);
+        sendStationList([], favorites);
+        return;
+      }
+
+      // Log response structure to debug field names
+      // Response has .results array with {name, distance, type, id} objects
+      var results = resp.results || resp.sdNameList || [];
+      if (!results.length) {
+        console.log('checkName: no stations found');
+        sendStationList([], favorites);
+        return;
+      }
+
+      var nearby = [];
+      for (var i = 0; i < results.length && i < 3; i++) {
+        var r = results[i];
+        if (r.type && r.type !== 'STATION') continue;
+        var distMeters = r.distance || 0;
+        nearby.push({
+          name: r.name,
+          dist: Math.min(Math.round(distMeters / 10), 255)
+        });
+      }
+      sendStationList(nearby, favorites);
+    });
+  });
+}
+
+// ---- Departures ----
 
 function sendDepartures(departures) {
   var dict = {};
@@ -68,68 +294,14 @@ function sendError(msg) {
   Pebble.sendAppMessage(dict);
 }
 
-function fetchFromGTI(user, password, station) {
-  var body = JSON.stringify({
-    station: { name: station, type: 'STATION' },
-    time: { date: 'heute', time: 'jetzt' },
-    maxList: 10,
-    maxTimeOffset: 60,
-    useRealtime: true
-  });
-
-  var signature = hmac.signRequest(password, body);
-
-  var req = new XMLHttpRequest();
-  req.open('POST', 'https://gti.geofox.de/gti/public/departureList', true);
-  req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-  req.setRequestHeader('Accept', 'application/json');
-  req.setRequestHeader('geofox-auth-user', user);
-  req.setRequestHeader('geofox-auth-signature', signature);
-  req.setRequestHeader('geofox-auth-type', 'HmacSHA1');
-
-  req.onload = function() {
-    if (req.status === 200) {
-      try {
-        var resp = JSON.parse(req.responseText);
-        if (resp.departures && resp.departures.length > 0) {
-          var departures = [];
-          console.log('First departure line obj: ' + JSON.stringify(resp.departures[0].line));
-          for (var i = 0; i < resp.departures.length && i < 10; i++) {
-            var d = resp.departures[i];
-            departures.push({
-              line: d.line ? d.line.name : '?',
-              type: mapLineType(d.line),
-              direction: (d.line && d.line.direction) || d.direction || '',
-              minutes: d.timeOffset || 0,
-              delay: d.delay || 0
-            });
-          }
-          sendDepartures(departures);
-        } else {
-          sendDepartures([]);
-        }
-      } catch (e) {
-        console.log('Parse error: ' + e.message);
-        sendError('Parse error');
-      }
-    } else {
-      console.log('GTI API error: ' + req.status);
-      sendError('API error ' + req.status);
-    }
-  };
-
-  req.onerror = function() {
-    console.log('GTI request failed');
-    sendError('Connection error');
-  };
-
-  req.send(body);
-}
-
 function fetchDepartures() {
+  if (!currentStation) {
+    console.log('No station selected');
+    return;
+  }
+
   var user = localStorage.getItem('gti_user');
   var password = localStorage.getItem('gti_password');
-  var station = localStorage.getItem('station') || 'Jungfernstieg';
 
   if (!user || !password) {
     console.log('No GTI credentials, sending demo data');
@@ -137,16 +309,65 @@ function fetchDepartures() {
     return;
   }
 
-  fetchFromGTI(user, password, station);
+  gtiRequest('departureList', {
+    station: { name: currentStation, type: 'STATION' },
+    time: { date: 'heute', time: 'jetzt' },
+    maxList: 10,
+    maxTimeOffset: 60,
+    useRealtime: true
+  }, function(resp, err) {
+    if (err) {
+      console.log('departureList error: ' + err);
+      sendError(err);
+      return;
+    }
+
+    if (resp.departures && resp.departures.length > 0) {
+      var departures = [];
+      for (var i = 0; i < resp.departures.length && i < 10; i++) {
+        var d = resp.departures[i];
+        var lineName = d.line ? d.line.name.replace(/-SEV$/, '') : '?';
+        var lineType = mapLineType(d.line);
+        var dir = (d.line && d.line.direction) || d.direction || '';
+        console.log('dep[' + i + ']: ' + lineName + ' type=' + lineType +
+          ' dir=' + dir + ' raw=' + JSON.stringify(d.line ? d.line.type : null));
+        departures.push({
+          line: lineName,
+          type: lineType,
+          direction: dir,
+          minutes: d.timeOffset || 0,
+          delay: d.delay || 0
+        });
+      }
+      sendDepartures(departures);
+    } else {
+      sendDepartures([]);
+    }
+  });
 }
+
+// ---- Event Handlers ----
 
 Pebble.addEventListener('ready', function() {
   console.log('PebbleKit JS ready');
-  fetchDepartures();
+  try {
+    fetchStations();
+  } catch (e) {
+    console.log('fetchStations error: ' + e.message);
+    sendStationList(DEMO_NEARBY, []);
+  }
 });
 
 Pebble.addEventListener('appmessage', function(e) {
+  if (e.payload[keys.REQUEST_STATIONS]) {
+    fetchStations();
+  }
   if (e.payload[keys.REQUEST_DEPARTURES]) {
+    fetchDepartures();
+  }
+  if (e.payload[keys.SELECT_STATION]) {
+    currentStation = e.payload[keys.SELECT_STATION];
+    console.log('Station selected: ' + currentStation);
     fetchDepartures();
   }
 });
@@ -160,20 +381,20 @@ Pebble.addEventListener('webviewclosed', function(e) {
 
   var dict = clay.getSettings(e.response);
 
-  // Save config to localStorage for API calls
-  var station = dict[keys.CONFIG_STATION];
+  // Save credentials
   var user = dict[keys.CONFIG_USER];
   var password = dict[keys.CONFIG_PASSWORD];
-
-  if (station) localStorage.setItem('station', station);
   if (user) localStorage.setItem('gti_user', user);
   if (password) localStorage.setItem('gti_password', password);
 
-  // Send station name to watch for display
-  var watchDict = {};
-  if (station) watchDict[keys.CONFIG_STATION] = station;
-  Pebble.sendAppMessage(watchDict, function() {
-    // After config saved, fetch fresh data
-    fetchDepartures();
-  });
+  // Save favorites
+  for (var i = 1; i <= 5; i++) {
+    var val = dict[keys['FAV_' + i]];
+    if (val !== undefined) {
+      localStorage.setItem('fav_' + i, val);
+    }
+  }
+
+  // Refresh station list
+  fetchStations();
 });
