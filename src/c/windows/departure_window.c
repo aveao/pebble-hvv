@@ -23,22 +23,28 @@ extern void app_stop_departure_refresh(void);
   #define HEADER_TEXT_Y -2
   #define DIR_TEXT_Y_NUDGE 2
   #define DIR_X_GAP 4
+  #define FONT_DIR_SMALL FONT_KEY_GOTHIC_18
+  #define DIR_TEXT_H_SMALL 24
+  #define DIR_TEXT_Y_NUDGE_SMALL 1
 #else
-  #define ROW_HEIGHT 28
-  #define BADGE_HEIGHT 18
+  #define ROW_HEIGHT 34
+  #define BADGE_HEIGHT 20
   #define BADGE_WIDTH 28
-  #define BADGE_MARGIN 3
-  #define MINS_WIDTH 30
-  #define HEADER_HEIGHT 16
-  #define FONT_DIR FONT_KEY_GOTHIC_18
-  #define FONT_MINS FONT_KEY_GOTHIC_18_BOLD
+  #define BADGE_MARGIN 2
+  #define MINS_WIDTH 24
+  #define HEADER_HEIGHT 20
+  #define FONT_DIR FONT_KEY_GOTHIC_24
+  #define FONT_MINS FONT_KEY_GOTHIC_24_BOLD
   #define FONT_BADGE FONT_KEY_GOTHIC_14_BOLD
-  #define FONT_HEADER FONT_KEY_GOTHIC_14_BOLD
-  #define DIR_TEXT_H 22
+  #define FONT_HEADER FONT_KEY_GOTHIC_18_BOLD
+  #define DIR_TEXT_H 28
   #define BADGE_TEXT_OFFSET 2
   #define HEADER_TEXT_Y -2
-  #define DIR_TEXT_Y_NUDGE 1
-  #define DIR_X_GAP 4
+  #define DIR_TEXT_Y_NUDGE 3
+  #define DIR_X_GAP 3
+  #define FONT_DIR_SMALL FONT_KEY_GOTHIC_18
+  #define DIR_TEXT_H_SMALL 22
+  #define DIR_TEXT_Y_NUDGE_SMALL 1
 #endif
 
 static Window *s_window;
@@ -94,17 +100,32 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
 
   // Direction and minutes
   int dir_x = BADGE_MARGIN + BADGE_WIDTH + DIR_X_GAP;
+  int dir_w = width - dir_x - MINS_WIDTH - 2;
+
+  // Use large font if text fits, otherwise fall back to smaller font
+  GFont dir_font = fonts_get_system_font(FONT_DIR);
+  GSize text_size = graphics_text_layout_get_content_size(
+    dep->direction, dir_font, GRect(0, 0, 500, 100),
+    GTextOverflowModeWordWrap, GTextAlignmentLeft);
   int text_h = DIR_TEXT_H;
-  int text_y = cy - text_h / 2 - DIR_TEXT_Y_NUDGE;
-  GRect dir_rect = GRect(dir_x, text_y, width - dir_x - MINS_WIDTH - 2, text_h);
-  graphics_draw_text(ctx, dep->direction,
-    fonts_get_system_font(FONT_DIR),
+  int nudge = DIR_TEXT_Y_NUDGE;
+  if (text_size.w >= dir_w) {
+    dir_font = fonts_get_system_font(FONT_DIR_SMALL);
+    text_h = DIR_TEXT_H_SMALL;
+    nudge = DIR_TEXT_Y_NUDGE_SMALL;
+  }
+
+  int text_y = cy - text_h / 2 - nudge;
+  GRect dir_rect = GRect(dir_x, text_y, dir_w, text_h);
+  graphics_draw_text(ctx, dep->direction, dir_font,
     dir_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   char mins_buf[8];
   int total_mins = dep->minutes + dep->delay;
   snprintf(mins_buf, sizeof(mins_buf), "%d'", total_mins);
-  GRect mins_rect = GRect(width - MINS_WIDTH - 2, text_y, MINS_WIDTH, text_h);
+  // Minutes always use large font positioning
+  int mins_y = cy - DIR_TEXT_H / 2 - DIR_TEXT_Y_NUDGE;
+  GRect mins_rect = GRect(width - MINS_WIDTH - 2, mins_y, MINS_WIDTH, DIR_TEXT_H);
   graphics_draw_text(ctx, mins_buf,
     fonts_get_system_font(FONT_MINS),
     mins_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
