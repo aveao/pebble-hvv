@@ -300,6 +300,8 @@ function fetchDepartures() {
     return;
   }
 
+  console.log('fetchDepartures for: ' + currentStation);
+
   var user = localStorage.getItem('gti_user');
   var password = localStorage.getItem('gti_password');
 
@@ -309,11 +311,14 @@ function fetchDepartures() {
     return;
   }
 
+  var stationObj = { name: currentStation, type: 'STATION' };
+  console.log('departureList request station: ' + JSON.stringify(stationObj));
+
   gtiRequest('departureList', {
-    station: { name: currentStation, type: 'STATION' },
+    station: stationObj,
     time: { date: 'heute', time: 'jetzt' },
     maxList: 10,
-    maxTimeOffset: 60,
+    maxTimeOffset: 120,
     useRealtime: true
   }, function(resp, err) {
     if (err) {
@@ -321,6 +326,7 @@ function fetchDepartures() {
       sendError(err);
       return;
     }
+    console.log('departureList response: ' + JSON.stringify(resp).substring(0, 500));
 
     if (resp.departures && resp.departures.length > 0) {
       var departures = [];
@@ -359,15 +365,24 @@ Pebble.addEventListener('ready', function() {
 });
 
 Pebble.addEventListener('appmessage', function(e) {
-  if (e.payload[keys.REQUEST_STATIONS]) {
+  console.log('appmessage keys: ' + JSON.stringify(Object.keys(e.payload)));
+  console.log('appmessage payload: ' + JSON.stringify(e.payload));
+
+  var selectVal = e.payload[keys.SELECT_STATION] || e.payload['SELECT_STATION'];
+  var reqStations = e.payload[keys.REQUEST_STATIONS] || e.payload['REQUEST_STATIONS'];
+  var reqDeps = e.payload[keys.REQUEST_DEPARTURES] || e.payload['REQUEST_DEPARTURES'];
+
+  if (reqStations) {
+    console.log('-> REQUEST_STATIONS');
     fetchStations();
   }
-  if (e.payload[keys.REQUEST_DEPARTURES]) {
+  if (reqDeps) {
+    console.log('-> REQUEST_DEPARTURES');
     fetchDepartures();
   }
-  if (e.payload[keys.SELECT_STATION]) {
-    currentStation = e.payload[keys.SELECT_STATION];
-    console.log('Station selected: ' + currentStation);
+  if (selectVal) {
+    currentStation = selectVal;
+    console.log('-> SELECT_STATION: ' + currentStation);
     fetchDepartures();
   }
 });

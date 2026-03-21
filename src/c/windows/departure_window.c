@@ -51,6 +51,7 @@ static Window *s_window;
 static ScrollLayer *s_scroll_layer;
 static Layer *s_content_layer;
 static TextLayer *s_loading_layer;
+static bool s_received_data;
 
 static int16_t prv_get_content_height(void) {
   return HEADER_HEIGHT + data_get_count() * ROW_HEIGHT;
@@ -157,6 +158,9 @@ static void prv_update_content_size(void) {
 
   bool has_data = data_get_count() > 0;
   layer_set_hidden(text_layer_get_layer(s_loading_layer), has_data);
+  if (!has_data && s_received_data) {
+    text_layer_set_text(s_loading_layer, "No departures");
+  }
 }
 
 static void prv_window_load(Window *window) {
@@ -194,8 +198,8 @@ static void prv_window_unload(Window *window) {
 }
 
 static void prv_window_appear(Window *window) {
-  // Request departures immediately and start refresh cycle
-  comm_request_departures();
+  s_received_data = false;
+  text_layer_set_text(s_loading_layer, "Loading...");
   app_start_departure_refresh();
 }
 
@@ -217,5 +221,6 @@ void departure_window_push(void) {
 }
 
 void departure_window_refresh(void) {
+  s_received_data = true;
   prv_update_content_size();
 }
