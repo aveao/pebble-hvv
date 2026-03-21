@@ -37,6 +37,10 @@ Use preprocessor defines for conditional compilation: `PBL_COLOR`, `PBL_BW`, `PB
 
 Never hardcode screen dimensions — use `layer_get_bounds()` on the window's root layer and UnobstructedArea APIs.
 
+### Emery (Pebble Time 2) Scaling
+
+Emery has a 200x228 display (~1.4x basalt's 144x168). UI elements use `#ifdef PBL_PLATFORM_EMERY` to define scaled sizes — roughly 1.5x for dimensions and one font size up (GOTHIC_18→GOTHIC_24, GOTHIC_14→GOTHIC_18). Pebble's built-in Gothic fonts have varying amounts of internal top padding at different sizes, so vertical nudge values (`_Y_NUDGE`) need per-platform tuning. Always test on both basalt and emery emulators when changing layout constants.
+
 Tag platform-specific image resources with `~bw` or `~color` suffixes.
 
 ### Battery Conservation

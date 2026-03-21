@@ -1,4 +1,25 @@
 {
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:developer.rebble.io)",
+      "WebFetch(domain:developer.repebble.com)",
+      "WebFetch(domain:developer.repebble.io)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "WebFetch(domain:gti.geofox.de)",
+      "WebFetch(domain:github.com)",
+      "Bash(pebble build:*)",
+      "Bash(pebble package:*)",
+      "Bash(pebble install:*)",
+      "Bash(pebble screenshot:*)",
+      "Bash(pebble logs:*)",
+      "Bash(pebble clean:*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true
   }

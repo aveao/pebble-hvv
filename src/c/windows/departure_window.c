@@ -7,12 +7,39 @@
 extern void app_start_departure_refresh(void);
 extern void app_stop_departure_refresh(void);
 
-#define ROW_HEIGHT 28
-#define BADGE_HEIGHT 18
-#define BADGE_WIDTH 28
-#define BADGE_MARGIN 3
-#define MINS_WIDTH 30
-#define HEADER_HEIGHT 16
+#ifdef PBL_PLATFORM_EMERY
+  #define ROW_HEIGHT 36
+  #define BADGE_HEIGHT 24
+  #define BADGE_WIDTH 38
+  #define BADGE_MARGIN 6
+  #define MINS_WIDTH 34
+  #define HEADER_HEIGHT 22
+  #define FONT_DIR FONT_KEY_GOTHIC_24
+  #define FONT_MINS FONT_KEY_GOTHIC_24_BOLD
+  #define FONT_BADGE FONT_KEY_GOTHIC_18_BOLD
+  #define FONT_HEADER FONT_KEY_GOTHIC_18_BOLD
+  #define DIR_TEXT_H 30
+  #define BADGE_TEXT_OFFSET 3
+  #define HEADER_TEXT_Y -2
+  #define DIR_TEXT_Y_NUDGE 2
+  #define DIR_X_GAP 4
+#else
+  #define ROW_HEIGHT 28
+  #define BADGE_HEIGHT 18
+  #define BADGE_WIDTH 28
+  #define BADGE_MARGIN 3
+  #define MINS_WIDTH 30
+  #define HEADER_HEIGHT 16
+  #define FONT_DIR FONT_KEY_GOTHIC_18
+  #define FONT_MINS FONT_KEY_GOTHIC_18_BOLD
+  #define FONT_BADGE FONT_KEY_GOTHIC_14_BOLD
+  #define FONT_HEADER FONT_KEY_GOTHIC_14_BOLD
+  #define DIR_TEXT_H 22
+  #define BADGE_TEXT_OFFSET 2
+  #define HEADER_TEXT_Y -2
+  #define DIR_TEXT_Y_NUDGE 1
+  #define DIR_X_GAP 4
+#endif
 
 static Window *s_window;
 static ScrollLayer *s_scroll_layer;
@@ -34,9 +61,9 @@ static void prv_draw_header(GContext *ctx, GRect bounds, int16_t width) {
   graphics_fill_rect(ctx, header_rect, 0, GCornerNone);
 
   graphics_context_set_text_color(ctx, GColorWhite);
-  GRect text_rect = GRect(4, -2, width - 8, HEADER_HEIGHT);
+  GRect text_rect = GRect(4, HEADER_TEXT_Y, width - 8, HEADER_HEIGHT);
   graphics_draw_text(ctx, data_get_station_name(),
-    fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+    fonts_get_system_font(FONT_HEADER),
     text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
@@ -66,12 +93,12 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   graphics_context_set_text_color(ctx, GColorBlack);
 
   // Direction and minutes
-  int dir_x = BADGE_MARGIN + BADGE_WIDTH + 4;
-  int text_h = 22;
-  int text_y = cy - text_h / 2 - 1;
+  int dir_x = BADGE_MARGIN + BADGE_WIDTH + DIR_X_GAP;
+  int text_h = DIR_TEXT_H;
+  int text_y = cy - text_h / 2 - DIR_TEXT_Y_NUDGE;
   GRect dir_rect = GRect(dir_x, text_y, width - dir_x - MINS_WIDTH - 2, text_h);
   graphics_draw_text(ctx, dep->direction,
-    fonts_get_system_font(FONT_KEY_GOTHIC_18),
+    fonts_get_system_font(FONT_DIR),
     dir_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   char mins_buf[8];
@@ -79,7 +106,7 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   snprintf(mins_buf, sizeof(mins_buf), "%d'", total_mins);
   GRect mins_rect = GRect(width - MINS_WIDTH - 2, text_y, MINS_WIDTH, text_h);
   graphics_draw_text(ctx, mins_buf,
-    fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+    fonts_get_system_font(FONT_MINS),
     mins_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 

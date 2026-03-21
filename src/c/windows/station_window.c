@@ -7,6 +7,28 @@
 #define SECTION_NEARBY 0
 #define SECTION_FAVORITES 1
 
+#ifdef PBL_PLATFORM_EMERY
+  #define STN_HEADER_HEIGHT 24
+  #define STN_ROW_HEIGHT 32
+  #define STN_FONT_NAME FONT_KEY_GOTHIC_24
+  #define STN_FONT_HEADER FONT_KEY_GOTHIC_18_BOLD
+  #define STN_FONT_DIST FONT_KEY_GOTHIC_18
+  #define STN_HEADER_TEXT_Y -2
+  #define STN_NAME_TEXT_Y -2
+  #define STN_DIST_TEXT_Y 2
+  #define STN_DIST_WIDTH 50
+#else
+  #define STN_HEADER_HEIGHT 16
+  #define STN_ROW_HEIGHT 22
+  #define STN_FONT_NAME FONT_KEY_GOTHIC_18
+  #define STN_FONT_HEADER FONT_KEY_GOTHIC_14_BOLD
+  #define STN_FONT_DIST FONT_KEY_GOTHIC_14
+  #define STN_HEADER_TEXT_Y -2
+  #define STN_NAME_TEXT_Y -2
+  #define STN_DIST_TEXT_Y 1
+  #define STN_DIST_WIDTH 36
+#endif
+
 static Window *s_window;
 static MenuLayer *s_menu_layer;
 static TextLayer *s_loading_layer;
@@ -28,7 +50,7 @@ static int16_t prv_get_header_height(MenuLayer *menu_layer, uint16_t section_ind
   // Hide section header if empty
   if (section_index == SECTION_NEARBY && stations_get_nearby_count() == 0) return 0;
   if (section_index == SECTION_FAVORITES && stations_get_favorite_count() == 0) return 0;
-  return 16;
+  return STN_HEADER_HEIGHT;
 }
 
 static void prv_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_index, void *context) {
@@ -43,14 +65,14 @@ static void prv_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t sec
 
   graphics_context_set_text_color(ctx, GColorWhite);
   const char *title = (section_index == SECTION_NEARBY) ? "Nearby" : "Favorites";
-  GRect text_rect = GRect(4, -2, bounds.size.w - 8, 16);
+  GRect text_rect = GRect(4, STN_HEADER_TEXT_Y, bounds.size.w - 8, STN_HEADER_HEIGHT);
   graphics_draw_text(ctx, title,
-    fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+    fonts_get_system_font(STN_FONT_HEADER),
     text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
 static int16_t prv_get_cell_height(MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
-  return 22;
+  return STN_ROW_HEIGHT;
 }
 
 static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell_index, void *context) {
@@ -65,10 +87,10 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
   GRect bounds = layer_get_bounds(cell_layer);
 
   // Draw station name — give full width for favorites, leave space for distance on nearby
-  int dist_width = (station->type == STATION_NEARBY && station->distance > 0) ? 36 : 0;
-  GRect name_rect = GRect(4, -2, bounds.size.w - 8 - dist_width, 22);
+  int dist_width = (station->type == STATION_NEARBY && station->distance > 0) ? STN_DIST_WIDTH : 0;
+  GRect name_rect = GRect(4, STN_NAME_TEXT_Y, bounds.size.w - 8 - dist_width, STN_ROW_HEIGHT);
   graphics_draw_text(ctx, station->name,
-    fonts_get_system_font(FONT_KEY_GOTHIC_18),
+    fonts_get_system_font(STN_FONT_NAME),
     name_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
   // Draw distance for nearby stations
@@ -76,9 +98,9 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
     char dist_buf[8];
     int meters = station->distance * 10;
     snprintf(dist_buf, sizeof(dist_buf), "%dm", meters);
-    GRect dist_rect = GRect(bounds.size.w - dist_width - 2, 0, dist_width, 20);
+    GRect dist_rect = GRect(bounds.size.w - dist_width - 2, STN_DIST_TEXT_Y, dist_width, STN_ROW_HEIGHT);
     graphics_draw_text(ctx, dist_buf,
-      fonts_get_system_font(FONT_KEY_GOTHIC_14),
+      fonts_get_system_font(STN_FONT_DIST),
       dist_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   }
 }

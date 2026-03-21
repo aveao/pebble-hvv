@@ -43,15 +43,26 @@ static GColor prv_ubahn_text_color(const char *line) {
   return GColorWhite;
 }
 
+#ifdef PBL_PLATFORM_EMERY
+  #define BADGE_FONT FONT_KEY_GOTHIC_18_BOLD
+  #define BADGE_FONT_H 18
+  #define BADGE_LABEL_Y_NUDGE 3
+  #define BADGE_LABEL_X_NUDGE 1
+#else
+  #define BADGE_FONT FONT_KEY_GOTHIC_14_BOLD
+  #define BADGE_FONT_H 14
+  #define BADGE_LABEL_Y_NUDGE 2
+  #define BADGE_LABEL_X_NUDGE 0
+#endif
+
 static void prv_draw_label(GContext *ctx, const char *line, GRect rect, GColor text_color) {
   graphics_context_set_text_color(ctx, text_color);
 
-  // GOTHIC_14_BOLD has ~2px top padding; nudge up to visually center
-  int text_y = rect.origin.y + (rect.size.h - 14) / 2 - 2;
-  GRect text_rect = GRect(rect.origin.x, text_y, rect.size.w, 16);
+  int text_y = rect.origin.y + (rect.size.h - BADGE_FONT_H) / 2 - BADGE_LABEL_Y_NUDGE;
+  GRect text_rect = GRect(rect.origin.x + BADGE_LABEL_X_NUDGE, text_y, rect.size.w, BADGE_FONT_H + 4);
 
   graphics_draw_text(ctx, line,
-    fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+    fonts_get_system_font(BADGE_FONT),
     text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
 }
 

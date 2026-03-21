@@ -3,11 +3,17 @@
 A Pebble smartwatch app that displays real-time HVV (Hamburger Verkehrsverbund) transit departures. Shows nearby stops via GPS and lets you save favorite stations for quick access.
 
 <p align="center">
-  <img src=".assets/pebble_screenshot_mainpage.png" alt="Station list" width="144">
+  <img src=".assets/basalt_screenshot_mainpage.png" alt="Station list (Pebble Time)" width="144">
   &nbsp;&nbsp;
-  <img src=".assets/pebble_screenshot_hbf.png" alt="Hamburg Hbf departures" width="144">
+  <img src=".assets/basalt_screenshot_hbf.png" alt="Hamburg Hbf departures (Pebble Time)" width="144">
   &nbsp;&nbsp;
-  <img src=".assets/pebble_screenshot_berliner_tor.png" alt="Berliner Tor departures" width="144">
+  <img src=".assets/basalt_screenshot_berliner_tor.png" alt="Berliner Tor departures (Pebble Time)" width="144">
+</p>
+
+<p align="center">
+  <img src=".assets/emery_screenshot_mainpage.png" alt="Station list (Pebble Time 2)" width="228">
+  &nbsp;&nbsp;
+  <img src=".assets/emery_screenshot_jungfernstieg.png" alt="Hamburg Hbf departures (Pebble Time 2)" width="228">
 </p>
 
 ## Features
@@ -63,7 +69,7 @@ Open the Pebble app on your phone, go to the HVV Departures settings, and enter:
 pebble build                              # Build for all platforms
 pebble install --emulator basalt          # Install to emulator
 pebble screenshot --emulator basalt       # Take a screenshot
-pebble logs                               # View JS and C logs
+pebble logs --emulator basalt             # View JS and C logs
 ```
 
 The emulator uses Hamburg Hbf as a fake GPS location for testing.
