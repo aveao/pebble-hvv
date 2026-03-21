@@ -1,0 +1,47 @@
+{
+  "name": "pebble-hvv",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {
+    "pebble-clay": "^1.0.4"
+  },
+  "pebble": {
+    "displayName": "HVV Departures",
+    "uuid": "d9095b06-6bc7-4ef3-97f8-7cb8fe5c753e",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "capabilities": [
+      "configurable"
+    ],
+    "messageKeys": [
+      "REQUEST_DEPARTURES",
+      "DEP_COUNT",
+      "DEP_LINE[10]",
+      "DEP_TYPE[10]",
+      "DEP_DIR[10]",
+      "DEP_MINS[10]",
+      "DEP_DELAY[10]",
+      "CONFIG_STATION",
+      "CONFIG_USER",
+      "CONFIG_PASSWORD",
+      "ERROR_MSG"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}

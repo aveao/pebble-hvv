@@ -1,0 +1,151 @@
+#include "departure_window.h"
+#include "../modules/data.h"
+#include "../modules/icons.h"
+
+#define ROW_HEIGHT 28
+#define BADGE_HEIGHT 18
+#define BADGE_WIDTH 28
+#define BADGE_MARGIN 3
+#define MINS_WIDTH 30
+#define HEADER_HEIGHT 18
+
+static Window *s_window;
+static ScrollLayer *s_scroll_layer;
+static Layer *s_content_layer;
+static TextLayer *s_loading_layer;
+
+static int16_t prv_get_content_height(void) {
+  return HEADER_HEIGHT + data_get_count() * ROW_HEIGHT;
+}
+
+static void prv_draw_header(GContext *ctx, GRect bounds, int16_t width) {
+  GRect header_rect = GRect(0, 0, width, HEADER_HEIGHT);
+
+#ifdef PBL_COLOR
+  graphics_context_set_fill_color(ctx, GColorDarkGray);
+#else
+  graphics_context_set_fill_color(ctx, GColorBlack);
+#endif
+  graphics_fill_rect(ctx, header_rect, 0, GCornerNone);
+
+  graphics_context_set_text_color(ctx, GColorWhite);
+  GRect text_rect = GRect(4, -2, width - 8, HEADER_HEIGHT);
+  graphics_draw_text(ctx, data_get_station_name(),
+    fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+    text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+}
+
+static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t width) {
+  Departure *dep = data_get_departure(index);
+  if (!dep) return;
+
+  int cy = y + ROW_HEIGHT / 2;
+
+  // Alternate row background on color platforms
+#ifdef PBL_COLOR
+  if (index % 2 == 0) {
+    graphics_context_set_fill_color(ctx, GColorWhite);
+  } else {
+    graphics_context_set_fill_color(ctx, GColorLightGray);
+  }
+  graphics_fill_rect(ctx, GRect(0, y, width, ROW_HEIGHT), 0, GCornerNone);
+#endif
+
+  graphics_context_set_text_color(ctx, GColorBlack);
+
+  // Draw badge
+  GRect badge_rect = GRect(BADGE_MARGIN, cy - BADGE_HEIGHT / 2, BADGE_WIDTH, BADGE_HEIGHT);
+  icons_draw_badge(ctx, dep->type, dep->line, badge_rect);
+
+  // Restore text color after badge
+  graphics_context_set_text_color(ctx, GColorBlack);
+
+  // Direction and minutes
+  int dir_x = BADGE_MARGIN + BADGE_WIDTH + 4;
+  int text_h = 22;
+  int text_y = cy - text_h / 2 - 1;
+  GRect dir_rect = GRect(dir_x, text_y, width - dir_x - MINS_WIDTH - 2, text_h);
+  graphics_draw_text(ctx, dep->direction,
+    fonts_get_system_font(FONT_KEY_GOTHIC_18),
+    dir_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+
+  char mins_buf[8];
+  int total_mins = dep->minutes + dep->delay;
+  snprintf(mins_buf, sizeof(mins_buf), "%d'", total_mins);
+  GRect mins_rect = GRect(width - MINS_WIDTH - 2, text_y, MINS_WIDTH, text_h);
+  graphics_draw_text(ctx, mins_buf,
+    fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+    mins_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+}
+
+static void prv_content_update_proc(Layer *layer, GContext *ctx) {
+  GRect bounds = layer_get_bounds(layer);
+
+  prv_draw_header(ctx, bounds, bounds.size.w);
+
+  int count = data_get_count();
+  for (int i = 0; i < count; i++) {
+    int16_t y = HEADER_HEIGHT + i * ROW_HEIGHT;
+    prv_draw_departure_row(ctx, i, y, bounds.size.w);
+  }
+}
+
+static void prv_update_content_size(void) {
+  if (!s_scroll_layer || !s_content_layer) return;
+
+  GRect scroll_bounds = layer_get_bounds(scroll_layer_get_layer(s_scroll_layer));
+  int16_t content_h = prv_get_content_height();
+  // Ensure at least the scroll view height
+  if (content_h < scroll_bounds.size.h) content_h = scroll_bounds.size.h;
+
+  layer_set_frame(s_content_layer, GRect(0, 0, scroll_bounds.size.w, content_h));
+  scroll_layer_set_content_size(s_scroll_layer, GSize(scroll_bounds.size.w, content_h));
+  layer_mark_dirty(s_content_layer);
+
+  bool has_data = data_get_count() > 0;
+  layer_set_hidden(text_layer_get_layer(s_loading_layer), has_data);
+}
+
+static void prv_window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect bounds = layer_get_bounds(window_layer);
+
+  // Scroll layer fills window
+  s_scroll_layer = scroll_layer_create(bounds);
+  scroll_layer_set_shadow_hidden(s_scroll_layer, true);
+  scroll_layer_set_click_config_onto_window(s_scroll_layer, window);
+  layer_add_child(window_layer, scroll_layer_get_layer(s_scroll_layer));
+
+  // Content layer drawn inside scroll layer
+  s_content_layer = layer_create(GRect(0, 0, bounds.size.w, bounds.size.h));
+  layer_set_update_proc(s_content_layer, prv_content_update_proc);
+  scroll_layer_add_child(s_scroll_layer, s_content_layer);
+
+  // Loading text centered
+  s_loading_layer = text_layer_create(GRect(0, bounds.size.h / 2 - 10, bounds.size.w, 20));
+  text_layer_set_text(s_loading_layer, "Loading...");
+  text_layer_set_text_alignment(s_loading_layer, GTextAlignmentCenter);
+  text_layer_set_background_color(s_loading_layer, GColorClear);
+  layer_add_child(window_layer, text_layer_get_layer(s_loading_layer));
+
+  prv_update_content_size();
+}
+
+static void prv_window_unload(Window *window) {
+  scroll_layer_destroy(s_scroll_layer);
+  layer_destroy(s_content_layer);
+  text_layer_destroy(s_loading_layer);
+}
+
+void departure_window_push(void) {
+  s_window = window_create();
+  window_set_window_handlers(s_window, (WindowHandlers) {
+    .load = prv_window_load,
+    .unload = prv_window_unload,
+  });
+  window_stack_push(s_window, true);
+}
+
+void departure_window_refresh(void) {
+  prv_update_content_size();
+}
