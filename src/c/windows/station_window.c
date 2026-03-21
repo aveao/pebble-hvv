@@ -4,8 +4,8 @@
 #include "../modules/comm.h"
 #include "../modules/data.h"
 
-#define SECTION_NEARBY 0
-#define SECTION_FAVORITES 1
+#define SECTION_FAVORITES 0
+#define SECTION_NEARBY 1
 
 #ifdef PBL_PLATFORM_EMERY
   #define STN_HEADER_HEIGHT 28
@@ -167,8 +167,10 @@ static void prv_window_unload(Window *window) {
 }
 
 static void prv_window_appear(Window *window) {
-  // Request fresh station list when returning to this window
-  comm_request_stations();
+  // Only request stations if we don't have any yet
+  if (stations_get_count() == 0) {
+    comm_request_stations();
+  }
 }
 
 void station_window_push(void) {

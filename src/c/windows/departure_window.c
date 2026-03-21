@@ -12,7 +12,7 @@ extern void app_stop_departure_refresh(void);
   #define BADGE_HEIGHT 24
   #define BADGE_WIDTH 38
   #define BADGE_MARGIN 6
-  #define MINS_WIDTH 34
+  #define MINS_WIDTH 44
   #define HEADER_HEIGHT 22
   #define FONT_DIR FONT_KEY_GOTHIC_24
   #define FONT_MINS FONT_KEY_GOTHIC_24_BOLD
@@ -31,7 +31,7 @@ extern void app_stop_departure_refresh(void);
   #define BADGE_HEIGHT 20
   #define BADGE_WIDTH 28
   #define BADGE_MARGIN 2
-  #define MINS_WIDTH 24
+  #define MINS_WIDTH 34
   #define HEADER_HEIGHT 20
   #define FONT_DIR FONT_KEY_GOTHIC_24
   #define FONT_MINS FONT_KEY_GOTHIC_24_BOLD
@@ -99,9 +99,19 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   // Restore text color after badge
   graphics_context_set_text_color(ctx, GColorBlack);
 
-  // Direction and minutes
+  // Build minutes string and measure its width
+  char mins_buf[8];
+  int total_mins = dep->minutes + dep->delay;
+  snprintf(mins_buf, sizeof(mins_buf), "%d'", total_mins);
+  GFont mins_font = fonts_get_system_font(FONT_MINS);
+  GSize mins_size = graphics_text_layout_get_content_size(
+    mins_buf, mins_font, GRect(0, 0, MINS_WIDTH, DIR_TEXT_H),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight);
+  int mins_w = mins_size.w + 4; // small padding
+
+  // Direction gets remaining space
   int dir_x = BADGE_MARGIN + BADGE_WIDTH + DIR_X_GAP;
-  int dir_w = width - dir_x - MINS_WIDTH - 2;
+  int dir_w = width - dir_x - mins_w - 2;
 
   // Use large font if text fits, otherwise fall back to smaller font
   GFont dir_font = fonts_get_system_font(FONT_DIR);
@@ -121,14 +131,10 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   graphics_draw_text(ctx, dep->direction, dir_font,
     dir_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 
-  char mins_buf[8];
-  int total_mins = dep->minutes + dep->delay;
-  snprintf(mins_buf, sizeof(mins_buf), "%d'", total_mins);
-  // Minutes always use large font positioning
+  // Draw minutes right-aligned
   int mins_y = cy - DIR_TEXT_H / 2 - DIR_TEXT_Y_NUDGE;
-  GRect mins_rect = GRect(width - MINS_WIDTH - 2, mins_y, MINS_WIDTH, DIR_TEXT_H);
-  graphics_draw_text(ctx, mins_buf,
-    fonts_get_system_font(FONT_MINS),
+  GRect mins_rect = GRect(width - mins_w - 2, mins_y, mins_w, DIR_TEXT_H);
+  graphics_draw_text(ctx, mins_buf, mins_font,
     mins_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 }
 

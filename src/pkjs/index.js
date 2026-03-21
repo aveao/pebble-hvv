@@ -210,15 +210,22 @@ function fetchStations() {
     return;
   }
 
-  // With credentials, skip nearby if outside Hamburg or no GPS
+  // Send favorites immediately so user sees them while GPS resolves
+  if (favorites.length > 0) {
+    console.log('Sending favorites immediately (' + favorites.length + ')');
+    sendStationList([], favorites);
+  }
 
+  // Then fetch nearby stations asynchronously
   getLocation(function(lat, lon) {
     if (!lat || !lon) {
-      sendStationList([], favorites);
+      // If no favorites were sent yet, send empty list so watch knows we're done
+      if (favorites.length === 0) {
+        sendStationList([], favorites);
+      }
       return;
     }
 
-    // Log the request for debugging
     var checkNameBody = {
       theName: {
         name: 'Haltestelle',
@@ -237,16 +244,13 @@ function fetchStations() {
     gtiRequest('checkName', checkNameBody, function(resp, err) {
       if (err) {
         console.log('checkName error: ' + err);
-        sendStationList([], favorites);
+        // Favorites already sent, no need to resend empty nearby
         return;
       }
 
-      // Log response structure to debug field names
-      // Response has .results array with {name, distance, type, id} objects
       var results = resp.results || resp.sdNameList || [];
       if (!results.length) {
         console.log('checkName: no stations found');
-        sendStationList([], favorites);
         return;
       }
 
@@ -260,6 +264,7 @@ function fetchStations() {
           dist: Math.min(Math.round(distMeters / 10), 255)
         });
       }
+      // Send complete list (favorites + nearby) to replace the favorites-only list
       sendStationList(nearby, favorites);
     });
   });
