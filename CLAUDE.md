@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pebble smartwatch app (SDK v3) for HVV (Hamburger Verkehrsverbund) transit departures. Displays real-time departures for a configurable station using the GTI API (gti.geofox.de). Targets platforms: aplite, basalt, chalk, diorite, emery.
+Pebble smartwatch app (SDK v3) for HVV (Hamburger Verkehrsverbund) transit departures. Displays real-time departures for a configurable station using the GTI API (gti.geofox.de). Targets platforms: aplite, basalt, diorite, emery.
 
 This is a watchapp (not a watchface).
 
@@ -61,7 +61,7 @@ Use `static` variables within modules for encapsulation. Expose only necessary f
 
 ```bash
 pebble build                       # Build for all target platforms
-pebble install --emulator basalt   # Install to emulator (aplite, basalt, chalk, diorite, emery)
+pebble install --emulator basalt   # Install to emulator (aplite, basalt, diorite, emery)
 pebble install --phone <IP>        # Install to phone
 pebble logs                        # View app logs (run right after install to not miss logs)
 pebble screenshot --emulator basalt  # Take screenshot (saves to cwd, delete after viewing)
