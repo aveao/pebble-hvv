@@ -16,6 +16,8 @@ A Pebble smartwatch app that displays real-time HVV (Hamburger Verkehrsverbund) 
   <img src=".assets/emery_screenshot_jungfernstieg.png" alt="Hamburg Hbf departures (Pebble Time 2)" width="228">
 </p>
 
+And yeah, it is developed with Claude Code.
+
 ## Features
 
 - **Nearby stops** — automatically finds the 3 closest stops using your phone's GPS
