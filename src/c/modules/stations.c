@@ -25,13 +25,14 @@ Station *stations_get(int index) {
   return &s_stations[index];
 }
 
-void stations_update(int index, const char *name, StationType type, uint8_t distance) {
+void stations_update(int index, const char *name, StationType type, uint8_t distance, uint8_t services) {
   if (index < 0 || index >= MAX_STATIONS) return;
   Station *s = &s_stations[index];
   strncpy(s->name, name, STATION_LABEL_LEN - 1);
   s->name[STATION_LABEL_LEN - 1] = '\0';
   s->type = type;
   s->distance = distance;
+  s->services = services;
 }
 
 int stations_get_nearby_count(void) {

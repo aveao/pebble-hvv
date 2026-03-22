@@ -63,10 +63,15 @@ function gtiRequest(endpoint, body, callback) {
   req.setRequestHeader('geofox-auth-signature', signature);
   req.setRequestHeader('geofox-auth-type', 'HmacSHA1');
 
+  console.log('GTI request: ' + endpoint + ' body=' + bodyStr);
+
   req.onload = function() {
+    console.log('GTI response: ' + endpoint + ' status=' + req.status);
+    console.log('GTI ' + endpoint + ' response body: ' + req.responseText);
     if (req.status === 200) {
       try {
-        callback(JSON.parse(req.responseText), null);
+        var parsed = JSON.parse(req.responseText);
+        callback(parsed, null);
       } catch (e) {
         callback(null, 'Parse error: ' + e.message);
       }
@@ -75,6 +80,7 @@ function gtiRequest(endpoint, body, callback) {
     }
   };
   req.onerror = function() {
+    console.log('GTI ' + endpoint + ' connection error');
     callback(null, 'Connection error');
   };
   req.send(bodyStr);
@@ -164,6 +170,29 @@ function getFavorites() {
   return favs;
 }
 
+// Service type bitmask flags (must match C side)
+var SERVICE_BUS   = (1 << 0);
+var SERVICE_SBAHN = (1 << 1);
+var SERVICE_UBAHN = (1 << 2);
+var SERVICE_FERRY = (1 << 3);
+var SERVICE_ABAHN = (1 << 4);
+var SERVICE_TRAIN = (1 << 5);
+
+function encodeServices(serviceTypes) {
+  if (!serviceTypes) return 0;
+  var mask = 0;
+  for (var i = 0; i < serviceTypes.length; i++) {
+    var s = serviceTypes[i].toLowerCase();
+    if (s === 'bus' || s === 'fbus' || s === 'schnellbus') mask |= SERVICE_BUS;
+    else if (s === 'sbahn' || s === 's') mask |= SERVICE_SBAHN;
+    else if (s === 'ubahn' || s === 'u') mask |= SERVICE_UBAHN;
+    else if (s === 'faehre' || s === 'ship') mask |= SERVICE_FERRY;
+    else if (s === 'abahn' || s === 'a') mask |= SERVICE_ABAHN;
+    else if (s === 'train' || s === 'r' || s === 'rbahn' || s === 'rb' || s === 're' || s === 'ice' || s === 'fbahn') mask |= SERVICE_TRAIN;
+  }
+  return mask;
+}
+
 // ---- Station List ----
 
 function sendStationList(nearby, favorites) {
@@ -172,11 +201,11 @@ function sendStationList(nearby, favorites) {
 
   // Add nearby (up to 3)
   for (var i = 0; i < nearby.length && i < 3; i++) {
-    stations.push({ name: nearby[i].name, isFav: 0, dist: nearby[i].dist });
+    stations.push({ name: nearby[i].name, isFav: 0, dist: nearby[i].dist, services: nearby[i].services || 0 });
   }
   // Add favorites
   for (var j = 0; j < favorites.length && stations.length < 8; j++) {
-    stations.push({ name: favorites[j], isFav: 1, dist: 0 });
+    stations.push({ name: favorites[j], isFav: 1, dist: 0, services: 0 });
   }
 
   dict[keys.STATION_COUNT] = stations.length;
@@ -184,6 +213,7 @@ function sendStationList(nearby, favorites) {
     dict[keys.STATION_NAME + k] = stations[k].name;
     dict[keys.STATION_IS_FAV + k] = stations[k].isFav;
     dict[keys.STATION_DIST + k] = stations[k].dist;
+    dict[keys.STATION_SERVICES + k] = stations[k].services;
   }
 
   Pebble.sendAppMessage(dict, function() {
@@ -195,9 +225,9 @@ function sendStationList(nearby, favorites) {
 
 // Demo nearby stations when no credentials
 var DEMO_NEARBY = [
-  { name: 'Jungfernstieg', dist: 12 },
-  { name: 'Hauptbahnhof', dist: 35 },
-  { name: 'Rathaus', dist: 45 },
+  { name: 'Jungfernstieg', dist: 12, services: SERVICE_SBAHN | SERVICE_UBAHN | SERVICE_BUS },
+  { name: 'Hauptbahnhof', dist: 35, services: SERVICE_SBAHN | SERVICE_UBAHN | SERVICE_BUS | SERVICE_TRAIN },
+  { name: 'Rathaus', dist: 45, services: SERVICE_UBAHN | SERVICE_BUS },
 ];
 
 function fetchStations() {
@@ -227,6 +257,7 @@ function fetchStations() {
     }
 
     var checkNameBody = {
+      version: 63,
       theName: {
         name: 'Haltestelle',
         type: 'STATION',
@@ -261,7 +292,8 @@ function fetchStations() {
         var distMeters = r.distance || 0;
         nearby.push({
           name: r.name,
-          dist: Math.min(Math.round(distMeters / 10), 255)
+          dist: Math.min(Math.round(distMeters / 10), 255),
+          services: encodeServices(r.serviceTypes)
         });
       }
       // Send complete list (favorites + nearby) to replace the favorites-only list
@@ -331,8 +363,6 @@ function fetchDepartures() {
       sendError(err);
       return;
     }
-    console.log('departureList response: ' + JSON.stringify(resp).substring(0, 500));
-
     if (resp.departures && resp.departures.length > 0) {
       var departures = [];
       for (var i = 0; i < resp.departures.length && i < 10; i++) {
@@ -340,8 +370,6 @@ function fetchDepartures() {
         var lineName = d.line ? d.line.name.replace(/-SEV$/, '') : '?';
         var lineType = mapLineType(d.line);
         var dir = (d.line && d.line.direction) || d.direction || '';
-        console.log('dep[' + i + ']: ' + lineName + ' type=' + lineType +
-          ' dir=' + dir + ' raw=' + JSON.stringify(d.line ? d.line.type : null));
         departures.push({
           line: lineName,
           type: lineType,

@@ -103,6 +103,50 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
       fonts_get_system_font(STN_FONT_DIST),
       dist_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   }
+
+#ifdef PBL_COLOR
+  // Draw service type dots below distance
+  if (station->services) {
+    static const uint8_t svc_flags[] = {
+      SERVICE_SBAHN, SERVICE_UBAHN, SERVICE_BUS, SERVICE_ABAHN, SERVICE_FERRY, SERVICE_TRAIN
+    };
+    int dot_r = PBL_IF_RECT_ELSE(3, 3);
+    #ifdef PBL_PLATFORM_EMERY
+      dot_r = 4;
+    #endif
+    int dot_spacing = dot_r * 2 + 2;
+
+    // Count active services
+    int num_dots = 0;
+    for (int i = 0; i < 6; i++) {
+      if (station->services & svc_flags[i]) num_dots++;
+    }
+    if (num_dots > 0) {
+      int total_w = num_dots * dot_spacing - 2;
+      // Right-align dots to match distance text
+      int start_x = bounds.size.w - 2 - total_w;
+      int dot_y = STN_ROW_HEIGHT - dot_r - 2;
+
+      int dx = 0;
+      for (int i = 0; i < 6; i++) {
+        if (!(station->services & svc_flags[i])) continue;
+        GColor c;
+        switch (svc_flags[i]) {
+          case SERVICE_SBAHN: c = GColorIslamicGreen; break;
+          case SERVICE_UBAHN: c = GColorBlue; break;
+          case SERVICE_BUS:   c = GColorRed; break;
+          case SERVICE_ABAHN: c = GColorOrange; break;
+          case SERVICE_FERRY: c = GColorTiffanyBlue; break;
+          case SERVICE_TRAIN: c = GColorLightGray; break;
+          default:            c = GColorDarkGray; break;
+        }
+        graphics_context_set_fill_color(ctx, c);
+        graphics_fill_circle(ctx, GPoint(start_x + dx + dot_r, dot_y), dot_r);
+        dx += dot_spacing;
+      }
+    }
+  }
+#endif
 }
 
 static void prv_select_click(MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {

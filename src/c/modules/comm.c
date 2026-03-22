@@ -26,12 +26,14 @@ static void prv_parse_stations(DictionaryIterator *iter) {
     Tuple *name_t = dict_find(iter, MESSAGE_KEY_STATION_NAME + i);
     Tuple *fav_t  = dict_find(iter, MESSAGE_KEY_STATION_IS_FAV + i);
     Tuple *dist_t = dict_find(iter, MESSAGE_KEY_STATION_DIST + i);
+    Tuple *svc_t  = dict_find(iter, MESSAGE_KEY_STATION_SERVICES + i);
 
     if (name_t) {
       stations_update(i,
         name_t->value->cstring,
         (fav_t && fav_t->value->int32) ? STATION_FAVORITE : STATION_NEARBY,
-        dist_t ? (uint8_t)dist_t->value->int32 : 0);
+        dist_t ? (uint8_t)dist_t->value->int32 : 0,
+        svc_t ? (uint8_t)svc_t->value->int32 : 0);
     }
   }
 

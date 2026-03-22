@@ -69,6 +69,10 @@ pebble install --emulator basalt   # Install to emulator (aplite, basalt, diorit
 pebble install --phone <IP>        # Install to phone
 pebble logs                        # View app logs (run right after install to not miss logs)
 pebble screenshot --emulator basalt  # Take screenshot (saves to cwd, delete after viewing)
+
+# Emulator button control (buttons: up / down / select / back)
+pebble emu-button --emulator basalt click up                              # Single press
+pebble emu-button --emulator basalt click --repeat 3 --interval 100 down  # Multi press
 ```
 
 When testing via emulator: build, install, then take a screenshot to verify visuals. Run `pebble logs` immediately after install to capture JS logs. Screenshots save to the working directory — delete them after viewing.

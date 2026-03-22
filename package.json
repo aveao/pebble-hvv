@@ -1,7 +1,7 @@
 {
   "name": "pebble-hvv",
   "author": "ave",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "keywords": [
     "pebble-app"
   ],
@@ -43,12 +43,21 @@
       "STATION_NAME[8]",
       "STATION_IS_FAV[8]",
       "STATION_DIST[8]",
+      "STATION_SERVICES[8]",
       "SELECT_STATION",
       "FAV_1",
       "FAV_2",
       "FAV_3",
       "FAV_4",
       "FAV_5"
+    ],
+    "projectRepositoryUrl": "https://github.com/aveao/pebble-hvv",
+    "screenshots": [
+      ".assets/basalt_screenshot_mainpage.png",
+      ".assets/basalt_screenshot_hbf.png",
+      ".assets/basalt_screenshot_berliner_tor.png",
+      ".assets/emery_screenshot_mainpage.png",
+      ".assets/emery_screenshot_jungfernstieg.png"
     ],
     "resources": {
       "media": [
