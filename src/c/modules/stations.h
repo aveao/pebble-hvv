@@ -2,7 +2,7 @@
 
 #include <pebble.h>
 
-#define MAX_STATIONS 8
+#define MAX_STATIONS 15
 #define STATION_LABEL_LEN 32
 
 typedef enum {

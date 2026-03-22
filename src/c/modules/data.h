@@ -2,7 +2,7 @@
 
 #include <pebble.h>
 
-#define MAX_DEPARTURES 10
+#define MAX_DEPARTURES 30
 #define LINE_NAME_LEN 8
 #define DIRECTION_LEN 32
 #define STATION_NAME_LEN 64

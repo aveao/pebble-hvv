@@ -75,6 +75,37 @@ module.exports = [
     ]
   },
   {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Display"
+      },
+      {
+        "type": "input",
+        "messageKey": "CONFIG_MAX_NEARBY",
+        "label": "Nearby stations to display",
+        "defaultValue": "3",
+        "attributes": {
+          "type": "number",
+          "min": 1,
+          "max": 10
+        }
+      },
+      {
+        "type": "input",
+        "messageKey": "CONFIG_MAX_DEPARTURES",
+        "label": "Max departures to display",
+        "defaultValue": "10",
+        "attributes": {
+          "type": "number",
+          "min": 10,
+          "max": 30
+        }
+      }
+    ]
+  },
+  {
     "type": "submit",
     "defaultValue": "Save"
   }

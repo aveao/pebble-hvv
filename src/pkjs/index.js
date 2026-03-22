@@ -12,6 +12,10 @@ var TRANSIT_UBAHN = 2;
 var TRANSIT_FERRY = 3;
 var TRANSIT_UNKNOWN = 4;
 
+// Configurable limits (loaded from localStorage, defaults below)
+var MAX_NEARBY = parseInt(localStorage.getItem('max_nearby'), 10) || 3;
+var MAX_DEPARTURES = parseInt(localStorage.getItem('max_departures'), 10) || 10;
+
 // Current station for departure fetches
 var currentStation = null;
 
@@ -200,11 +204,11 @@ function sendStationList(nearby, favorites) {
   var stations = [];
 
   // Add nearby (up to 3)
-  for (var i = 0; i < nearby.length && i < 3; i++) {
+  for (var i = 0; i < nearby.length && i < MAX_NEARBY; i++) {
     stations.push({ name: nearby[i].name, isFav: 0, dist: nearby[i].dist, services: nearby[i].services || 0 });
   }
   // Add favorites
-  for (var j = 0; j < favorites.length && stations.length < 8; j++) {
+  for (var j = 0; j < favorites.length && stations.length < 15; j++) {
     stations.push({ name: favorites[j], isFav: 1, dist: 0, services: 0 });
   }
 
@@ -267,7 +271,7 @@ function fetchStations() {
         }
       },
       coordinateType: 'EPSG_4326',
-      maxList: 3,
+      maxList: MAX_NEARBY,
       maxDistance: 2550,
       filterType: 'NO_FILTER',
       allowTypeSwitch: true
@@ -286,7 +290,7 @@ function fetchStations() {
       }
 
       var nearby = [];
-      for (var i = 0; i < results.length && i < 3; i++) {
+      for (var i = 0; i < results.length && i < MAX_NEARBY; i++) {
         var r = results[i];
         if (r.type && r.type !== 'STATION') continue;
         var distMeters = r.distance || 0;
@@ -306,7 +310,7 @@ function fetchStations() {
 
 function sendDepartures(departures) {
   var dict = {};
-  var count = Math.min(departures.length, 10);
+  var count = Math.min(departures.length, MAX_DEPARTURES);
   dict[keys.DEP_COUNT] = count;
 
   for (var i = 0; i < count; i++) {
@@ -354,8 +358,8 @@ function fetchDepartures() {
   gtiRequest('departureList', {
     station: stationObj,
     time: { date: 'heute', time: 'jetzt' },
-    maxList: 10,
-    maxTimeOffset: 120,
+    maxList: MAX_DEPARTURES,
+    maxTimeOffset: 999,
     useRealtime: true
   }, function(resp, err) {
     if (err) {
@@ -365,7 +369,7 @@ function fetchDepartures() {
     }
     if (resp.departures && resp.departures.length > 0) {
       var departures = [];
-      for (var i = 0; i < resp.departures.length && i < 10; i++) {
+      for (var i = 0; i < resp.departures.length && i < MAX_DEPARTURES; i++) {
         var d = resp.departures[i];
         var lineName = d.line ? d.line.name.replace(/-SEV$/, '') : '?';
         var lineType = mapLineType(d.line);
@@ -441,6 +445,20 @@ Pebble.addEventListener('webviewclosed', function(e) {
     if (val !== undefined) {
       localStorage.setItem('fav_' + i, val);
     }
+  }
+
+  // Save display settings
+  var maxNearby = dict[keys.CONFIG_MAX_NEARBY];
+  var maxDeps = dict[keys.CONFIG_MAX_DEPARTURES];
+  if (maxNearby) {
+    var n = Math.max(1, Math.min(10, parseInt(maxNearby, 10) || 3));
+    localStorage.setItem('max_nearby', n);
+    MAX_NEARBY = n;
+  }
+  if (maxDeps) {
+    var d = Math.max(10, Math.min(30, parseInt(maxDeps, 10) || 10));
+    localStorage.setItem('max_departures', d);
+    MAX_DEPARTURES = d;
   }
 
   // Refresh station list
