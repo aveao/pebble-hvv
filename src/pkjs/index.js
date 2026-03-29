@@ -24,8 +24,8 @@ var DEMO_DEPARTURES = [
   { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Ohlstedt',         minutes: 2,  delay: 0 },
   { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Norderstedt Mitte', minutes: 4,  delay: 1 },
   { line: 'S3',  type: TRANSIT_SBAHN, direction: 'Pinneberg',         minutes: 5,  delay: 0 },
-  { line: '112', type: TRANSIT_BUS,   direction: 'Mundsburg',         minutes: 7,  delay: 3 },
   { line: 'U3',  type: TRANSIT_UBAHN, direction: 'Barmbek',           minutes: 8,  delay: 0 },
+  { line: '112', type: TRANSIT_BUS,   direction: 'Mundsburg',         minutes: 7,  delay: 3 },
   { line: '62',  type: TRANSIT_FERRY, direction: 'Finkenwerder',      minutes: 10, delay: 0 },
   { line: 'S1',  type: TRANSIT_SBAHN, direction: 'Airport',           minutes: 12, delay: 2 },
   { line: '5',   type: TRANSIT_BUS,   direction: 'Burgwedel',         minutes: 14, delay: 0 },
@@ -229,9 +229,9 @@ function sendStationList(nearby, favorites) {
 
 // Demo nearby stations when no credentials
 var DEMO_NEARBY = [
-  { name: 'Jungfernstieg', dist: 12, services: SERVICE_SBAHN | SERVICE_UBAHN | SERVICE_BUS },
-  { name: 'Hauptbahnhof', dist: 35, services: SERVICE_SBAHN | SERVICE_UBAHN | SERVICE_BUS | SERVICE_TRAIN },
-  { name: 'Rathaus', dist: 45, services: SERVICE_UBAHN | SERVICE_BUS },
+  { name: 'Jungdemostieg', dist: 12, services: SERVICE_SBAHN | SERVICE_UBAHN | SERVICE_BUS },
+  { name: 'Hauptdemohof', dist: 35, services: SERVICE_SBAHN | SERVICE_UBAHN | SERVICE_BUS | SERVICE_TRAIN },
+  { name: 'Demohaus', dist: 45, services: SERVICE_UBAHN | SERVICE_BUS },
 ];
 
 function fetchStations() {
