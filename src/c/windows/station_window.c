@@ -30,6 +30,7 @@
 #endif
 
 static Window *s_window;
+static StatusBarLayer *s_status_bar;
 static MenuLayer *s_menu_layer;
 static TextLayer *s_loading_layer;
 static bool s_received_data;
@@ -179,7 +180,12 @@ static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  s_menu_layer = menu_layer_create(bounds);
+  s_status_bar = status_bar_layer_create();
+  layer_add_child(window_layer, status_bar_layer_get_layer(s_status_bar));
+
+  GRect content_bounds = GRect(0, STATUS_BAR_LAYER_HEIGHT, bounds.size.w,
+                                bounds.size.h - STATUS_BAR_LAYER_HEIGHT);
+  s_menu_layer = menu_layer_create(content_bounds);
   menu_layer_set_callbacks(s_menu_layer, NULL, (MenuLayerCallbacks) {
     .get_num_sections = prv_get_num_sections,
     .get_num_rows = prv_get_num_rows,
@@ -196,7 +202,7 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, menu_layer_get_layer(s_menu_layer));
 
   s_received_data = false;
-  s_loading_layer = text_layer_create(GRect(10, bounds.size.h / 2 - 30, bounds.size.w - 20, 60));
+  s_loading_layer = text_layer_create(GRect(10, bounds.size.h / 2 - 15, bounds.size.w - 20, 60));
   text_layer_set_text(s_loading_layer, "Loading stops...");
   text_layer_set_text_alignment(s_loading_layer, GTextAlignmentCenter);
   text_layer_set_background_color(s_loading_layer, GColorClear);
@@ -206,6 +212,7 @@ static void prv_window_load(Window *window) {
 }
 
 static void prv_window_unload(Window *window) {
+  status_bar_layer_destroy(s_status_bar);
   menu_layer_destroy(s_menu_layer);
   text_layer_destroy(s_loading_layer);
 }

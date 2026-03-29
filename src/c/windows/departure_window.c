@@ -51,6 +51,7 @@ extern void app_stop_departure_refresh(void);
 #define INACTIVITY_TIMEOUT_MS (15 * 60 * 1000)
 
 static Window *s_window;
+static StatusBarLayer *s_status_bar;
 static ScrollLayer *s_scroll_layer;
 static Layer *s_content_layer;
 static TextLayer *s_loading_layer;
@@ -177,8 +178,13 @@ static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  // Scroll layer fills window
-  s_scroll_layer = scroll_layer_create(bounds);
+  s_status_bar = status_bar_layer_create();
+  layer_add_child(window_layer, status_bar_layer_get_layer(s_status_bar));
+
+  // Scroll layer fills window below status bar
+  GRect scroll_bounds = GRect(0, STATUS_BAR_LAYER_HEIGHT, bounds.size.w,
+                               bounds.size.h - STATUS_BAR_LAYER_HEIGHT);
+  s_scroll_layer = scroll_layer_create(scroll_bounds);
   scroll_layer_set_shadow_hidden(s_scroll_layer, true);
   scroll_layer_set_click_config_onto_window(s_scroll_layer, window);
   layer_add_child(window_layer, scroll_layer_get_layer(s_scroll_layer));
@@ -200,6 +206,7 @@ static void prv_window_load(Window *window) {
 
 static void prv_window_unload(Window *window) {
   app_stop_departure_refresh();
+  status_bar_layer_destroy(s_status_bar);
   scroll_layer_destroy(s_scroll_layer);
   layer_destroy(s_content_layer);
   text_layer_destroy(s_loading_layer);
