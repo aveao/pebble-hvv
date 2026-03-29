@@ -47,11 +47,15 @@ extern void app_stop_departure_refresh(void);
   #define DIR_TEXT_Y_NUDGE_SMALL 1
 #endif
 
+// Auto-close after 15 minutes to stop unnecessary API requests
+#define INACTIVITY_TIMEOUT_MS (15 * 60 * 1000)
+
 static Window *s_window;
 static ScrollLayer *s_scroll_layer;
 static Layer *s_content_layer;
 static TextLayer *s_loading_layer;
 static bool s_received_data;
+static AppTimer *s_inactivity_timer;
 
 static int16_t prv_get_content_height(void) {
   return HEADER_HEIGHT + data_get_count() * ROW_HEIGHT;
@@ -203,14 +207,24 @@ static void prv_window_unload(Window *window) {
   s_content_layer = NULL;
 }
 
+static void prv_inactivity_timeout(void *context) {
+  s_inactivity_timer = NULL;
+  window_stack_pop(true);
+}
+
 static void prv_window_appear(Window *window) {
   s_received_data = false;
   text_layer_set_text(s_loading_layer, "Loading...");
   app_start_departure_refresh();
+  s_inactivity_timer = app_timer_register(INACTIVITY_TIMEOUT_MS, prv_inactivity_timeout, NULL);
 }
 
 static void prv_window_disappear(Window *window) {
   app_stop_departure_refresh();
+  if (s_inactivity_timer) {
+    app_timer_cancel(s_inactivity_timer);
+    s_inactivity_timer = NULL;
+  }
   // Clear departure data so next station starts fresh
   data_set_count(0);
 }

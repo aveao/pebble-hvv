@@ -33,3 +33,4 @@ release.properties
 node_modules/
 pebble_screenshot*
 !.assets/*
+.clangd
