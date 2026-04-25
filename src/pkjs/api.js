@@ -129,5 +129,6 @@ function request(endpoint, body, callback) {
 module.exports = {
   request: request,
   getMode: getMode,
+  getWatchToken: getWatchToken,
   DEMO_MODE: DEMO_MODE,
 };

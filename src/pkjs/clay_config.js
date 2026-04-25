@@ -114,7 +114,11 @@ module.exports = [
       },
       {
         "type": "text",
-        "defaultValue": "By default the app sends limited data (watch serial, IP, station name or coordinates) to a shared service that proxies HVV requests. Read the full <a href='https://github.com/aveao/pebble-hvv/blob/main/PRIVACY.md'>privacy policy</a> for what is collected, what is logged, and your GDPR rights."
+        "defaultValue": "By default the app sends limited data (watch token, IP, station name or coordinates) to a shared service that proxies HVV requests. Read the full <a href='https://github.com/aveao/pebble-hvv/blob/main/PRIVACY.md'>privacy policy</a> for what is collected, what is logged, and your GDPR rights."
+      },
+      {
+        "type": "text",
+        "defaultValue": "Your watch token (include this in any access/erasure request): <code>{{TOKEN}}</code>"
       }
     ]
   },

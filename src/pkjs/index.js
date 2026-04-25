@@ -364,8 +364,22 @@ Pebble.addEventListener('appmessage', function(e) {
   }
 });
 
+function substituteTokenPlaceholder(items, token) {
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (it && it.items) substituteTokenPlaceholder(it.items, token);
+    if (it && typeof it.defaultValue === 'string' && it.defaultValue.indexOf('{{TOKEN}}') !== -1) {
+      it.defaultValue = it.defaultValue.split('{{TOKEN}}').join(token);
+    }
+  }
+}
+
 Pebble.addEventListener('showConfiguration', function() {
-  Pebble.openURL(clay.generateUrl());
+  var token = api.getWatchToken() || '(unavailable on this watch)';
+  var configCopy = JSON.parse(JSON.stringify(clayConfig));
+  substituteTokenPlaceholder(configCopy, token);
+  var dynamicClay = new Clay(configCopy, null, { autoHandleEvents: false });
+  Pebble.openURL(dynamicClay.generateUrl());
 });
 
 Pebble.addEventListener('webviewclosed', function(e) {
