@@ -42,7 +42,7 @@ This data stays on your phone. It is not transmitted anywhere except to fulfil r
 
 When the app makes a request in proxy mode, the following are transmitted to `pebble-hvv-api.ave.zone`:
 
-- Your **watch serial number** (a 12-character alphanumeric string baked into the watch hardware), sent in the `X-Watch-Serial` request header. Used for abuse prevention.
+- A **watch token** sent in the `X-Watch-Token` request header. This is a unique token returned by the Pebble mobile app's `getWatchToken()` API; it is derived from your watch's hardware serial mixed with this app's UUID, so it is stable per-device but app-scoped i.e. it cannot be correlated with how you use any other Pebble app. Used for abuse prevention.
 - For station search: your **approximate GPS coordinates** at the moment you opened the app, plus a search radius and station-type filter.
 - For departure lookup: the **name of the station you selected**, plus the requested time window.
 - Your **IP address** (received automatically by Cloudflare as the network endpoint of your request).
@@ -62,7 +62,7 @@ HVV is an independent controller for any data they retain. Their terms of servic
 For each request, the proxy writes **exactly one** structured log line containing:
 
 - Timestamp
-- Watch serial number
+- Watch token
 - IP address (as seen by Cloudflare)
 - Endpoint name
 - HTTP response status code
@@ -86,7 +86,7 @@ The legitimate-interest balancing test:
 - The risk to you is low: the only stored fields are abuse-investigation metadata.
 - The benefit to you is direct: you get real-time HVV departures without registering for an HVV API key.
 
-If you'd rather not have your watch serial or IP processed by the proxy, you can switch to **BYO mode** (enter your own HVV credentials) or **demo mode** (clear them and rebuild without proxy config), see §2.
+If you'd rather not have your watch token or IP processed by the proxy, you can switch to **BYO mode** (enter your own HVV credentials) or **demo mode** (clear them and rebuild without proxy config), see §2.
 
 ## 5. Who else gets the data
 
@@ -117,13 +117,13 @@ The maintainer does not run any database or persistent log store of their own.
 
 Under the GDPR you have the following rights with respect to data the maintainer processes (i.e. what's in §3.4):
 
-- **Access:** you can ask for a copy of any log lines that mention your watch serial or IP.
-- **Erasure:** you can ask for log lines associated with your watch serial or IP to be deleted before their normal expiry.
+- **Access:** you can ask for a copy of any log lines associated with your watch token or IP.
+- **Erasure:** you can ask for those log lines to be deleted before their normal expiry.
 - **Restriction:** you can ask for processing of those entries to be paused.
 - **Objection:** you can object to processing based on legitimate interest at any time. The maintainer will then stop processing unless there are overriding grounds.
 - **Portability:** you can ask for a machine-readable copy of those entries.
 
-To exercise any of these rights, email **pebble-hvv-api [at] ave [dot] zone** with your watch serial number (printed on the back of your watch) and a description of what you want. Expect a reply within 30 days.
+To exercise any of these rights, email **pebble-hvv-api [at] ave [dot] zone** with a description of what you want. Expect a reply within 30 days.
 
 You can also lodge a complaint with a supervisory authority. For users in Hamburg, that is the *Hamburgischer Beauftragter für Datenschutz und Informationsfreiheit* (<https://datenschutz-hamburg.de>). Users elsewhere in the EU can contact their national supervisory authority.
 

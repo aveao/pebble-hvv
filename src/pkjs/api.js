@@ -1,28 +1,29 @@
 var hmac = require('./hmac');
 var buildConfig = require('./build_config');
 
-var SERIAL_RE = /^[A-Z0-9]{12}$/;
+// Pebble.getWatchToken() returns MD5(serial + appUuid + salt) as lowercase
+// hex (see coredevices/mobileapp JsTokenUtil.kt). 32 hex chars.
+var TOKEN_RE = /^[a-f0-9]{32}$/;
 
 var DEMO_MODE = 'DEMO_MODE';
 
-var cachedSerial = null;
-var cachedSerialResolved = false;
+var cachedToken = null;
+var cachedTokenResolved = false;
 
-function getSerial() {
-  if (cachedSerialResolved) return cachedSerial;
-  cachedSerialResolved = true;
+function getWatchToken() {
+  if (cachedTokenResolved) return cachedToken;
+  cachedTokenResolved = true;
   try {
-    var info = Pebble.getActiveWatchInfo();
-    var s = info && info.serialNumber;
-    if (typeof s === 'string' && SERIAL_RE.test(s)) {
-      cachedSerial = s;
+    var t = Pebble.getWatchToken && Pebble.getWatchToken();
+    if (typeof t === 'string' && TOKEN_RE.test(t)) {
+      cachedToken = t;
     } else {
-      cachedSerial = null;
+      cachedToken = null;
     }
   } catch (e) {
-    cachedSerial = null;
+    cachedToken = null;
   }
-  return cachedSerial;
+  return cachedToken;
 }
 
 function pickAdapter() {
@@ -32,7 +33,7 @@ function pickAdapter() {
 
   var base = buildConfig.PROXY_API_BASE;
   var secret = buildConfig.PROXY_SECRET;
-  if (base && secret && getSerial()) return 'proxy';
+  if (base && secret && getWatchToken()) return 'proxy';
 
   return 'demo';
 }
@@ -78,8 +79,8 @@ function requestGti(endpoint, body, callback) {
 }
 
 function requestProxy(endpoint, body, callback) {
-  var serial = getSerial();
-  if (!serial) {
+  var token = getWatchToken();
+  if (!token) {
     callback(null, 'Service config error');
     return;
   }
@@ -90,7 +91,7 @@ function requestProxy(endpoint, body, callback) {
   req.open('POST', url, true);
   req.setRequestHeader('Content-Type', 'application/json');
   req.setRequestHeader('Authorization', 'Bearer ' + buildConfig.PROXY_SECRET);
-  req.setRequestHeader('X-Watch-Serial', serial);
+  req.setRequestHeader('X-Watch-Token', token);
 
   console.log('Proxy request: ' + endpoint);
   req.onload = function() {

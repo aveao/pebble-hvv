@@ -70,7 +70,7 @@ module.exports = [
       },
       {
         "type": "text",
-        "defaultValue": "Most users should leave these blank — the app uses a shared service by default. Power users with their own GTI account can enter credentials here to bypass the shared service. Get credentials from <a href='https://gti.geofox.de/'>gti.geofox.de</a>."
+        "defaultValue": "Most users should leave these blank, the app uses a shared service by default. Power users with their own GTI account can enter credentials here to bypass the shared service. Get credentials from <a href='https://www.hvv.de/de/fahrplaene/abruf-fahrplaninfos/datenabruf'>HVV</a> (geofox API)."
       }
     ]
   },
