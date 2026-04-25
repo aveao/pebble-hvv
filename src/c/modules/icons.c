@@ -134,7 +134,10 @@ static void prv_draw_ferry(GContext *ctx, const char *line, GRect rect) {
 }
 
 static void prv_draw_unknown(GContext *ctx, const char *line, GRect rect) {
-  graphics_context_set_fill_color(ctx, GColorDarkGray);
+  // GColorDarkGray dithers to a checkerboard on aplite/diorite, which makes
+  // the white label unreadable. Fall back to solid black on B&W platforms.
+  GColor fill = PBL_IF_COLOR_ELSE(GColorDarkGray, GColorBlack);
+  graphics_context_set_fill_color(ctx, fill);
   graphics_fill_rect(ctx, rect, 2, GCornersAll);
 
   prv_draw_label(ctx, line, rect, GColorWhite);
