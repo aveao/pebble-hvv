@@ -37,3 +37,6 @@ pebble_screenshot*
 
 # Local design/plan docs (kept out of public history)
 docs/
+
+# Generated at build time from env vars
+src/pkjs/build_config.js

@@ -25,6 +25,9 @@ jobs:
           pebble sdk install latest
 
       - name: Build
+        env:
+          PROXY_API_BASE: ${{ secrets.PROXY_API_BASE }}
+          PROXY_SECRET: ${{ secrets.PROXY_SECRET }}
         run: pebble build
 
       - name: Upload PBW to release

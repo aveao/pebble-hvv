@@ -51,7 +51,7 @@ module.exports = [
     "items": [
       {
         "type": "heading",
-        "defaultValue": "API Credentials"
+        "defaultValue": "Bring your own GTI key (advanced)"
       },
       {
         "type": "input",
@@ -70,7 +70,7 @@ module.exports = [
       },
       {
         "type": "text",
-        "defaultValue": "Leave blank to use demo data. Get API credentials from <a href='https://gti.geofox.de/'>gti.geofox.de</a>."
+        "defaultValue": "Most users should leave these blank — the app uses a shared service by default. Power users with their own GTI account can enter credentials here to bypass the shared service. Get credentials from <a href='https://gti.geofox.de/'>gti.geofox.de</a>."
       }
     ]
   },
