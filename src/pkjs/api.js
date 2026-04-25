@@ -3,6 +3,8 @@ var buildConfig = require('./build_config');
 
 var SERIAL_RE = /^[A-Z0-9]{12}$/;
 
+var DEMO_MODE = 'DEMO_MODE';
+
 var cachedSerial = null;
 var cachedSerialResolved = false;
 
@@ -61,6 +63,12 @@ function requestGti(endpoint, body, callback) {
     if (req.status === 200) {
       try { callback(JSON.parse(req.responseText), null); }
       catch (e) { callback(null, 'Parse error: ' + e.message); }
+    } else if (req.status === 429) {
+      callback(null, 'Rate limited');
+    } else if (req.status === 502) {
+      callback(null, 'HVV unavailable');
+    } else if (req.status === 401 || req.status === 400) {
+      callback(null, 'Service config error');
     } else {
       callback(null, 'API error ' + req.status);
     }
@@ -70,8 +78,12 @@ function requestGti(endpoint, body, callback) {
 }
 
 function requestProxy(endpoint, body, callback) {
-  var bodyStr = JSON.stringify(body);
   var serial = getSerial();
+  if (!serial) {
+    callback(null, 'Service config error');
+    return;
+  }
+  var bodyStr = JSON.stringify(body);
   var url = buildConfig.PROXY_API_BASE.replace(/\/$/, '') + '/' + endpoint;
 
   var req = new XMLHttpRequest();
@@ -103,7 +115,7 @@ function requestProxy(endpoint, body, callback) {
 // Demo data lives in index.js; the demo adapter is a no-op caller that
 // returns a sentinel error so callers can route to demo fixtures themselves.
 function requestDemo(endpoint, body, callback) {
-  callback(null, 'DEMO_MODE');
+  callback(null, DEMO_MODE);
 }
 
 function request(endpoint, body, callback) {
@@ -116,4 +128,5 @@ function request(endpoint, body, callback) {
 module.exports = {
   request: request,
   getMode: getMode,
+  DEMO_MODE: DEMO_MODE,
 };
