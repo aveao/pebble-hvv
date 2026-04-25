@@ -18,6 +18,8 @@ A Pebble smartwatch app that displays real-time HVV (Hamburger Verkehrsverbund) 
 
 And yeah, it is developed with Claude Code.
 
+> **Privacy:** Out of the box the app sends a small amount of data (watch serial, IP, plus the station name or GPS coordinates of the request you make) to a shared proxy that forwards to HVV. Nothing is sold, no third-party analytics, no profile is built. See [PRIVACY.md](./PRIVACY.md) for the full breakdown of what's collected, what's logged, and your GDPR rights.
+
 ## Features
 
 - **Nearby stops** — automatically finds the 3 closest stops using your phone's GPS
