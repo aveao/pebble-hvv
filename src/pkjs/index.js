@@ -373,11 +373,18 @@ Pebble.addEventListener('webviewclosed', function(e) {
 
   var dict = clay.getSettings(e.response);
 
-  // Save credentials
+  // Save credentials. Empty string means the user cleared the field;
+  // we must remove the stored value so pickAdapter falls back to proxy.
   var user = dict[keys.CONFIG_USER];
   var password = dict[keys.CONFIG_PASSWORD];
-  if (user) localStorage.setItem('gti_user', user);
-  if (password) localStorage.setItem('gti_password', password);
+  if (user !== undefined) {
+    if (user) localStorage.setItem('gti_user', user);
+    else localStorage.removeItem('gti_user');
+  }
+  if (password !== undefined) {
+    if (password) localStorage.setItem('gti_password', password);
+    else localStorage.removeItem('gti_password');
+  }
 
   // Save favorites
   for (var i = 1; i <= 5; i++) {
