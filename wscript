@@ -9,6 +9,24 @@ top = '.'
 out = 'build'
 
 
+def _generate_build_config(ctx):
+    """Write src/pkjs/build_config.js from PROXY_API_BASE / PROXY_SECRET env vars."""
+    import json as _json
+    proxy_base = os.environ.get('PROXY_API_BASE', '')
+    proxy_secret = os.environ.get('PROXY_SECRET', '')
+
+    contents = (
+        '// Generated at build time from env vars. Do not edit.\n'
+        'module.exports = {\n'
+        '  PROXY_API_BASE: ' + _json.dumps(proxy_base) + ',\n'
+        '  PROXY_SECRET: ' + _json.dumps(proxy_secret) + ',\n'
+        '};\n'
+    )
+    out_path = os.path.join(ctx.path.abspath(), 'src', 'pkjs', 'build_config.js')
+    with open(out_path, 'w') as f:
+        f.write(contents)
+
+
 def options(ctx):
     ctx.load('pebble_sdk')
 
@@ -45,6 +63,8 @@ def build(ctx):
         else:
             binaries.append({'platform': platform, 'app_elf': app_elf})
     ctx.env = cached_env
+
+    _generate_build_config(ctx)
 
     ctx.set_group('bundle')
     ctx.pbl_bundle(binaries=binaries,
