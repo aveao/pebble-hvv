@@ -34,3 +34,6 @@ node_modules/
 pebble_screenshot*
 !.assets/*
 .clangd
+
+# Local design/plan docs (kept out of public history)
+docs/
