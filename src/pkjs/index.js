@@ -3,7 +3,7 @@ var clayConfig = require('./clay_config');
 var clay = new Clay(clayConfig, null, { autoHandleEvents: false });
 
 var keys = require('message_keys');
-var hmac = require('./hmac');
+var api = require('./api');
 
 // Transit type enum matching C side
 var TRANSIT_BUS = 0;
@@ -45,49 +45,6 @@ function mapLineType(lineObj) {
   if (shortInfo === 'BUS' || longInfo.indexOf('BUS') >= 0) return TRANSIT_BUS;
   if (longInfo.indexOf('FÄHRE') >= 0 || longInfo.indexOf('FAEHRE') >= 0 || longInfo.indexOf('SCHIFF') >= 0) return TRANSIT_FERRY;
   return TRANSIT_UNKNOWN;
-}
-
-function gtiRequest(endpoint, body, callback) {
-  var user = localStorage.getItem('gti_user');
-  var password = localStorage.getItem('gti_password');
-
-  if (!user || !password) {
-    callback(null, 'No credentials');
-    return;
-  }
-
-  var bodyStr = JSON.stringify(body);
-  var signature = hmac.signRequest(password, bodyStr);
-
-  var req = new XMLHttpRequest();
-  req.open('POST', 'https://gti.geofox.de/gti/public/' + endpoint, true);
-  req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-  req.setRequestHeader('Accept', 'application/json');
-  req.setRequestHeader('geofox-auth-user', user);
-  req.setRequestHeader('geofox-auth-signature', signature);
-  req.setRequestHeader('geofox-auth-type', 'HmacSHA1');
-
-  console.log('GTI request: ' + endpoint + ' body=' + bodyStr);
-
-  req.onload = function() {
-    console.log('GTI response: ' + endpoint + ' status=' + req.status);
-    console.log('GTI ' + endpoint + ' response body: ' + req.responseText);
-    if (req.status === 200) {
-      try {
-        var parsed = JSON.parse(req.responseText);
-        callback(parsed, null);
-      } catch (e) {
-        callback(null, 'Parse error: ' + e.message);
-      }
-    } else {
-      callback(null, 'API error ' + req.status);
-    }
-  };
-  req.onerror = function() {
-    console.log('GTI ' + endpoint + ' connection error');
-    callback(null, 'Connection error');
-  };
-  req.send(bodyStr);
 }
 
 // Emulator fallback coordinates: Hamburg Hbf
@@ -236,10 +193,10 @@ var DEMO_NEARBY = [
 
 function fetchStations() {
   var favorites = getFavorites();
-  var user = localStorage.getItem('gti_user');
+  var mode = api.getMode();
 
-  if (!user) {
-    console.log('No credentials, sending demo stations');
+  if (mode === 'demo') {
+    console.log('Demo mode, sending demo stations');
     sendStationList(DEMO_NEARBY, favorites);
     return;
   }
@@ -250,45 +207,35 @@ function fetchStations() {
     sendStationList([], favorites);
   }
 
-  // Then fetch nearby stations asynchronously
+  // Fetch nearby stations asynchronously
   getLocation(function(lat, lon) {
     if (!lat || !lon) {
-      // If no favorites were sent yet, send empty list so watch knows we're done
-      if (favorites.length === 0) {
-        sendStationList([], favorites);
-      }
+      if (favorites.length === 0) sendStationList([], favorites);
       return;
     }
-
     var checkNameBody = {
       version: 63,
       theName: {
         name: 'Haltestelle',
         type: 'STATION',
-        coordinate: {
-          x: lon,
-          y: lat
-        }
+        coordinate: { x: lon, y: lat },
       },
       coordinateType: 'EPSG_4326',
       maxList: MAX_NEARBY,
       maxDistance: 2550,
       filterType: 'NO_FILTER',
-      allowTypeSwitch: true
+      allowTypeSwitch: true,
     };
-    gtiRequest('checkName', checkNameBody, function(resp, err) {
+    api.request('checkName', checkNameBody, function(resp, err) {
       if (err) {
         console.log('checkName error: ' + err);
-        // Favorites already sent, no need to resend empty nearby
         return;
       }
-
       var results = resp.results || resp.sdNameList || [];
       if (!results.length) {
         console.log('checkName: no stations found');
         return;
       }
-
       var nearby = [];
       for (var i = 0; i < results.length && i < MAX_NEARBY; i++) {
         var r = results[i];
@@ -297,10 +244,9 @@ function fetchStations() {
         nearby.push({
           name: r.name,
           dist: Math.min(Math.round(distMeters / 10), 255),
-          services: encodeServices(r.serviceTypes)
+          services: encodeServices(r.serviceTypes),
         });
       }
-      // Send complete list (favorites + nearby) to replace the favorites-only list
       sendStationList(nearby, favorites);
     });
   });
@@ -340,27 +286,21 @@ function fetchDepartures() {
     console.log('No station selected');
     return;
   }
-
   console.log('fetchDepartures for: ' + currentStation);
 
-  var user = localStorage.getItem('gti_user');
-  var password = localStorage.getItem('gti_password');
-
-  if (!user || !password) {
-    console.log('No GTI credentials, sending demo data');
+  var mode = api.getMode();
+  if (mode === 'demo') {
+    console.log('Demo mode, sending demo data');
     sendDepartures(DEMO_DEPARTURES);
     return;
   }
 
-  var stationObj = { name: currentStation, type: 'STATION' };
-  console.log('departureList request station: ' + JSON.stringify(stationObj));
-
-  gtiRequest('departureList', {
-    station: stationObj,
+  api.request('departureList', {
+    station: { name: currentStation, type: 'STATION' },
     time: { date: 'heute', time: 'jetzt' },
     maxList: MAX_DEPARTURES,
     maxTimeOffset: 999,
-    useRealtime: true
+    useRealtime: true,
   }, function(resp, err) {
     if (err) {
       console.log('departureList error: ' + err);
@@ -379,7 +319,7 @@ function fetchDepartures() {
           type: lineType,
           direction: dir,
           minutes: d.timeOffset || 0,
-          delay: d.delay || 0
+          delay: d.delay || 0,
         });
       }
       sendDepartures(departures);
