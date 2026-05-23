@@ -37,6 +37,9 @@ static void prv_parse_stations(DictionaryIterator *iter) {
     }
   }
 
+  // Cache favorites on the watch so they render instantly on the next launch.
+  stations_save_favorites();
+
   if (s_stations_changed_callback) {
     s_stations_changed_callback();
   }

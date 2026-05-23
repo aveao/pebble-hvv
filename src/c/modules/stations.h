@@ -33,6 +33,10 @@ void stations_set_count(int count);
 Station *stations_get(int index);
 void stations_update(int index, const char *name, StationType type, uint8_t distance, uint8_t services);
 
+// Persist the current favorites to watch storage so they can be shown
+// instantly on the next launch, before the phone responds.
+void stations_save_favorites(void);
+
 // Count by type
 int stations_get_nearby_count(void);
 int stations_get_favorite_count(void);

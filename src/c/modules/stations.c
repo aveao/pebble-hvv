@@ -1,10 +1,32 @@
 #include "stations.h"
 
+// Persist keys (data.c owns key 1; keep favorites in a separate range).
+#define PERSIST_KEY_FAV_COUNT 100
+#define PERSIST_KEY_FAV_FIRST 101  // name strings at 101 .. 101 + MAX_STATIONS - 1
+
 static Station s_stations[MAX_STATIONS];
 static int s_station_count;
 
+// Restore favorites saved on a previous run so the favorites section can be
+// drawn at window load with no Bluetooth round-trip. Nearby (GPS) stations
+// still arrive later from the phone.
+static void prv_load_favorites(void) {
+  if (!persist_exists(PERSIST_KEY_FAV_COUNT)) return;
+  int n = persist_read_int(PERSIST_KEY_FAV_COUNT);
+  if (n > MAX_STATIONS) n = MAX_STATIONS;
+  for (int i = 0; i < n; i++) {
+    int key = PERSIST_KEY_FAV_FIRST + i;
+    if (!persist_exists(key)) continue;
+    char name[STATION_LABEL_LEN];
+    persist_read_string(key, name, sizeof(name));
+    stations_update(s_station_count, name, STATION_FAVORITE, 0, 0);
+    s_station_count++;
+  }
+}
+
 void stations_init(void) {
   s_station_count = 0;
+  prv_load_favorites();
 }
 
 void stations_deinit(void) {
@@ -71,4 +93,28 @@ Station *stations_get_favorite(int index) {
     }
   }
   return NULL;
+}
+
+void stations_save_favorites(void) {
+  int n = stations_get_favorite_count();
+  if (n > MAX_STATIONS) n = MAX_STATIONS;
+
+  // Skip the write when the stored favorites already match - favorites only
+  // change on a settings edit, so this avoids needless flash wear on every
+  // station refresh.
+  bool changed = !persist_exists(PERSIST_KEY_FAV_COUNT) ||
+                 persist_read_int(PERSIST_KEY_FAV_COUNT) != n;
+  for (int i = 0; i < n && !changed; i++) {
+    Station *fav = stations_get_favorite(i);
+    char stored[STATION_LABEL_LEN] = {0};
+    persist_read_string(PERSIST_KEY_FAV_FIRST + i, stored, sizeof(stored));
+    if (!fav || strncmp(stored, fav->name, STATION_LABEL_LEN) != 0) changed = true;
+  }
+  if (!changed) return;
+
+  persist_write_int(PERSIST_KEY_FAV_COUNT, n);
+  for (int i = 0; i < n; i++) {
+    Station *fav = stations_get_favorite(i);
+    if (fav) persist_write_string(PERSIST_KEY_FAV_FIRST + i, fav->name);
+  }
 }
