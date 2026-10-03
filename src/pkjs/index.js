@@ -356,7 +356,7 @@ function fetchDepartures(station) {
       var departures = [];
       for (var i = 0; i < resp.departures.length && i < getMaxDepartures(); i++) {
         var d = resp.departures[i];
-        var lineName = d.line ? d.line.name.replace(/-SEV$/, '').replace(/-BUS$/, '') : '?';
+        var lineName = (d.line && d.line.name) ? d.line.name.replace(/-SEV$/, '').replace(/-BUS$/, '') : '?';
         var lineType = mapLineType(d.line);
         var dir = (d.line && d.line.direction) || d.direction || '';
         departures.push({
