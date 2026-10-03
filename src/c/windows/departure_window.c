@@ -4,6 +4,7 @@
 #include "../modules/icons.h"
 #include "../modules/text.h"
 #include "../modules/settings.h"
+#include "../modules/round.h"
 
 // Emery and gabbro (round, 260x260) share sizes; round layouts inset rows
 #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
@@ -66,7 +67,20 @@ static AppTimer *s_refresh_timer;
 static char s_error[32];
 
 static int16_t prv_get_content_height(void) {
-  return HEADER_HEIGHT + data_get_count() * ROW_HEIGHT;
+  int16_t h = HEADER_HEIGHT + data_get_count() * ROW_HEIGHT;
+#ifdef PBL_ROUND
+  // Let the last row scroll up to the middle of the screen, where the circle is widest
+  h += layer_get_bounds(window_get_root_layer(s_window)).size.h / 2 - ROW_HEIGHT / 2;
+#endif
+  return h;
+}
+
+// Inset on each side for content rows y .. y+h at the current scroll
+// position, so they fit a round screen (always 0 on rectangular screens)
+static int16_t prv_inset_for(int16_t y, int16_t h) {
+  GSize screen = layer_get_bounds(window_get_root_layer(s_window)).size;
+  int16_t top = STATUS_BAR_LAYER_HEIGHT + scroll_layer_get_content_offset(s_scroll_layer).y + y;
+  return round_inset(top, top + h, screen);
 }
 
 static void prv_draw_header(GContext *ctx, int16_t width) {
@@ -80,14 +94,17 @@ static void prv_draw_header(GContext *ctx, int16_t width) {
   graphics_fill_rect(ctx, header_rect, 0, GCornerNone);
 
   graphics_context_set_text_color(ctx, GColorWhite);
-  GRect text_rect = GRect(4, HEADER_TEXT_Y, width - 8, HEADER_HEIGHT);
+  int16_t inset = prv_inset_for(0, HEADER_HEIGHT);
+  GRect text_rect = GRect(4 + inset, HEADER_TEXT_Y, width - 8 - 2 * inset, HEADER_HEIGHT);
   const char *title = s_error[0] ? s_error : data_get_station_name();
   graphics_draw_text(ctx, title,
     fonts_get_system_font(FONT_HEADER),
-    text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+    text_rect, GTextOverflowModeTrailingEllipsis,
+    PBL_IF_ROUND_ELSE(GTextAlignmentCenter, GTextAlignmentLeft), NULL);
 }
 
-static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t width) {
+static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t width,
+                                   int16_t inset) {
   Departure *dep = data_get_departure(index);
   if (!dep) return;
 
@@ -103,10 +120,14 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   graphics_fill_rect(ctx, GRect(0, y, width, ROW_HEIGHT), 0, GCornerNone);
 #endif
 
+  // Rows mostly outside a round screen's edge: no room for badge and minutes,
+  // so only the background stripe is drawn until they scroll further in
+  if (width - 2 - inset - MINS_WIDTH < BADGE_MARGIN + inset + BADGE_WIDTH) return;
+
   graphics_context_set_text_color(ctx, GColorBlack);
 
   // Draw badge
-  GRect badge_rect = GRect(BADGE_MARGIN, cy - BADGE_HEIGHT / 2, BADGE_WIDTH, BADGE_HEIGHT);
+  GRect badge_rect = GRect(BADGE_MARGIN + inset, cy - BADGE_HEIGHT / 2, BADGE_WIDTH, BADGE_HEIGHT);
   icons_draw_badge(ctx, dep->type, dep->line, badge_rect);
 
   // Restore text color after badge
@@ -122,9 +143,12 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight);
   int mins_w = mins_size.w + 4; // small padding
 
-  // Direction gets remaining space
-  int dir_x = BADGE_MARGIN + BADGE_WIDTH + DIR_X_GAP;
-  int dir_w = width - dir_x - mins_w - 2;
+  // Direction gets the space between badge and minutes (none for rows
+  // squeezed at the very top/bottom of a round screen)
+  int right = width - 2 - inset;
+  int dir_x = BADGE_MARGIN + inset + BADGE_WIDTH + DIR_X_GAP;
+  int dir_w = right - dir_x - mins_w;
+  if (dir_w < 0) dir_w = 0;
 
   // Use large font if text fits, otherwise fall back to smaller font
 #ifdef FONT_DIR_BOLD
@@ -154,14 +178,14 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
 
   // Draw minutes right-aligned
   int mins_y = cy - DIR_TEXT_H / 2 - DIR_TEXT_Y_NUDGE;
-  GRect mins_rect = GRect(width - mins_w - 2, mins_y, mins_w, DIR_TEXT_H);
+  GRect mins_rect = GRect(right - mins_w, mins_y, mins_w, DIR_TEXT_H);
   graphics_draw_text(ctx, mins_buf, mins_font,
     mins_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
 
   // Strike through direction and minutes of cancelled departures
-  if (dep->cancelled) {
+  if (dep->cancelled && right > dir_x) {
     graphics_context_set_fill_color(ctx, PBL_IF_COLOR_ELSE(GColorRed, GColorBlack));
-    graphics_fill_rect(ctx, GRect(dir_x, cy - 1, width - 2 - dir_x, 2), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(dir_x, cy - 1, right - dir_x, 2), 0, GCornerNone);
   }
 }
 
@@ -173,7 +197,9 @@ static void prv_content_update_proc(Layer *layer, GContext *ctx) {
   int count = data_get_count();
   for (int i = 0; i < count; i++) {
     int16_t y = HEADER_HEIGHT + i * ROW_HEIGHT;
-    prv_draw_departure_row(ctx, i, y, bounds.size.w);
+    // Inset for the band where badge and minutes are drawn, not the whole row
+    int16_t inset = prv_inset_for(y + (ROW_HEIGHT - BADGE_HEIGHT) / 2, BADGE_HEIGHT);
+    prv_draw_departure_row(ctx, i, y, bounds.size.w, inset);
   }
 }
 
