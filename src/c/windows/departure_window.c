@@ -212,6 +212,9 @@ static void prv_window_unload(Window *window) {
   text_layer_destroy(s_loading_layer);
   s_scroll_layer = NULL;
   s_content_layer = NULL;
+  s_loading_layer = NULL;
+  window_destroy(window);
+  s_window = NULL;
 }
 
 static void prv_inactivity_timeout(void *context) {
