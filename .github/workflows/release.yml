@@ -23,8 +23,8 @@ jobs:
       # Bump these together with the versions used for local testing.
       - name: Install Pebble SDK
         run: |
-          uv tool install pebble-tool==5.0.29 --python 3.13
-          pebble sdk install 4.9.148
+          uv tool install pebble-tool==5.0.40 --python 3.13
+          pebble sdk install 4.33.1
 
       - name: Build
         env:
