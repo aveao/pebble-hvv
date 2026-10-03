@@ -17,6 +17,7 @@
   #define STN_NAME_TEXT_Y 1
   #define STN_DIST_TEXT_Y 3
   #define STN_DIST_WIDTH 60
+  #define STN_DOT_RADIUS 4
 #else
   #define STN_HEADER_HEIGHT 20
   #define STN_ROW_HEIGHT 30
@@ -27,6 +28,7 @@
   #define STN_NAME_TEXT_Y -2
   #define STN_DIST_TEXT_Y 1
   #define STN_DIST_WIDTH 44
+  #define STN_DOT_RADIUS 3
 #endif
 
 static Window *s_window;
@@ -112,15 +114,12 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
     static const uint8_t svc_flags[] = {
       SERVICE_SBAHN, SERVICE_UBAHN, SERVICE_BUS, SERVICE_ABAHN, SERVICE_FERRY, SERVICE_TRAIN
     };
-    int dot_r = PBL_IF_RECT_ELSE(3, 3);
-    #ifdef PBL_PLATFORM_EMERY
-      dot_r = 4;
-    #endif
+    int dot_r = STN_DOT_RADIUS;
     int dot_spacing = dot_r * 2 + 2;
 
     // Count active services
     int num_dots = 0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < (int)ARRAY_LENGTH(svc_flags); i++) {
       if (station->services & svc_flags[i]) num_dots++;
     }
     if (num_dots > 0) {
@@ -130,7 +129,7 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
       int dot_y = STN_ROW_HEIGHT - dot_r - 2;
 
       int dx = 0;
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < (int)ARRAY_LENGTH(svc_flags); i++) {
         if (!(station->services & svc_flags[i])) continue;
         GColor c;
         switch (svc_flags[i]) {

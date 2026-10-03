@@ -64,7 +64,7 @@ static int16_t prv_get_content_height(void) {
   return HEADER_HEIGHT + data_get_count() * ROW_HEIGHT;
 }
 
-static void prv_draw_header(GContext *ctx, GRect bounds, int16_t width) {
+static void prv_draw_header(GContext *ctx, int16_t width) {
   GRect header_rect = GRect(0, 0, width, HEADER_HEIGHT);
 
 #ifdef PBL_COLOR
@@ -155,7 +155,7 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
 static void prv_content_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
 
-  prv_draw_header(ctx, bounds, bounds.size.w);
+  prv_draw_header(ctx, bounds.size.w);
 
   int count = data_get_count();
   for (int i = 0; i < count; i++) {

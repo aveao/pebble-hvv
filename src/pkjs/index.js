@@ -441,7 +441,7 @@ Pebble.addEventListener('showConfiguration', function() {
 });
 
 Pebble.addEventListener('webviewclosed', function(e) {
-  if (e && !e.response) return;
+  if (!e || !e.response) return;
 
   var dict = clay.getSettings(e.response);
 
