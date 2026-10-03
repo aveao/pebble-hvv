@@ -248,13 +248,17 @@ function fetchStations() {
       allowTypeSwitch: true,
     };
     api.request('checkName', checkNameBody, function(resp, err) {
+      // Favorites (if any) were already sent above; otherwise send an empty
+      // list so the watch leaves its loading state.
       if (err) {
         console.log('checkName error: ' + err);
+        if (favorites.length === 0) sendStationList([], favorites);
         return;
       }
       var results = resp.results || resp.sdNameList || [];
       if (!results.length) {
         console.log('checkName: no stations found');
+        if (favorites.length === 0) sendStationList([], favorites);
         return;
       }
       var nearby = [];
