@@ -93,12 +93,19 @@ static bool prv_is_for_current_station(DictionaryIterator *iter) {
 }
 
 static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) {
-  // Settings saved on the phone
+  // Settings saved on the phone; one message may carry any of these keys
   Tuple *bold_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_BOLD_TEXT);
-  if (bold_tuple) {
-    settings_set_bold_text(bold_tuple->value->int32 != 0);
-    if (s_settings_changed_callback) {
-      s_settings_changed_callback();
+  Tuple *touch_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_TOUCH_NAV);
+  if (bold_tuple || touch_tuple) {
+    if (touch_tuple) {
+      settings_set_touch_nav(touch_tuple->value->int32 != 0);
+    }
+    // Only bold text changes what's drawn
+    if (bold_tuple) {
+      settings_set_bold_text(bold_tuple->value->int32 != 0);
+      if (s_settings_changed_callback) {
+        s_settings_changed_callback();
+      }
     }
     return;
   }
