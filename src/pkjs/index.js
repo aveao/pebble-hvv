@@ -319,7 +319,8 @@ function fetchDepartures() {
           type: lineType,
           direction: dir,
           minutes: d.timeOffset || 0,
-          delay: d.delay || 0,
+          // GTI reports delay in seconds; the watch works in minutes
+          delay: Math.round((d.delay || 0) / 60),
         });
       }
       sendDepartures(departures);
