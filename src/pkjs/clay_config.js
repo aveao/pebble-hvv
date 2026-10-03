@@ -108,6 +108,12 @@ module.exports = [
         "messageKey": "CONFIG_BOLD_TEXT",
         "label": "Bold departure text",
         "defaultValue": false
+      },
+      {
+        "type": "toggle",
+        "messageKey": "CONFIG_TOUCH_NAV",
+        "label": "Touch navigation (touchscreen watches)",
+        "defaultValue": true
       }
     ]
   },

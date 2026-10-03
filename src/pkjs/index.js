@@ -436,6 +436,8 @@ function setMaxDeparturesLimit(items, limit) {
   }
 }
 
+var BOLD_TEXT_PLATFORMS = ['emery', 'gabbro'];
+
 // Remove settings items by messageKey (e.g. options only one platform supports)
 function removeConfigItems(items, messageKeys) {
   for (var i = items.length - 1; i >= 0; i--) {
@@ -450,11 +452,30 @@ Pebble.addEventListener('showConfiguration', function() {
   var configCopy = JSON.parse(JSON.stringify(clayConfig));
   substituteTokenPlaceholder(configCopy, token);
   setMaxDeparturesLimit(configCopy, maxDeparturesLimit());
-  // Bold text only has a layout tuned for emery
-  if (getPlatform() !== 'emery') removeConfigItems(configCopy, ['CONFIG_BOLD_TEXT']);
+  // Bold text only has layouts tuned for these watches
+  if (BOLD_TEXT_PLATFORMS.indexOf(getPlatform()) === -1) {
+    removeConfigItems(configCopy, ['CONFIG_BOLD_TEXT']);
+  }
   var dynamicClay = new Clay(configCopy, null, { autoHandleEvents: false });
   Pebble.openURL(dynamicClay.generateUrl());
 });
+
+// Display settings the watch stores itself (see settings.c)
+var WATCH_SETTINGS = ['CONFIG_BOLD_TEXT', 'CONFIG_TOUCH_NAV'];
+
+// Pick the watch-side settings out of Clay's result as 0/1, or null if none
+// are present (e.g. the bold toggle is hidden on most watches)
+function buildWatchSettings(dict) {
+  var settings = null;
+  for (var i = 0; i < WATCH_SETTINGS.length; i++) {
+    var key = keys[WATCH_SETTINGS[i]];
+    if (dict[key] !== undefined) {
+      settings = settings || {};
+      settings[key] = dict[key] ? 1 : 0;
+    }
+  }
+  return settings;
+}
 
 Pebble.addEventListener('webviewclosed', function(e) {
   if (!e || !e.response) return;
@@ -497,12 +518,8 @@ Pebble.addEventListener('webviewclosed', function(e) {
   }
 
   // The watch stores its own display settings
-  var bold = dict[keys.CONFIG_BOLD_TEXT];
-  if (bold !== undefined) {
-    var settings = {};
-    settings[keys.CONFIG_BOLD_TEXT] = bold ? 1 : 0;
-    sendToWatch(settings, 'Settings');
-  }
+  var watchSettings = buildWatchSettings(dict);
+  if (watchSettings) sendToWatch(watchSettings, 'Settings');
 
   // Refresh station list
   fetchStations();
