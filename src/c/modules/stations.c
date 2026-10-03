@@ -1,7 +1,8 @@
 #include "stations.h"
 #include "text.h"
 
-// Persist keys (data.c owns key 1; keep favorites in a separate range).
+// Persist keys. Key 1 held the last selected station name in older versions;
+// keep favorites in a separate range.
 #define PERSIST_KEY_FAV_COUNT 100
 #define PERSIST_KEY_FAV_FIRST 101  // name strings at 101 .. 101 + MAX_STATIONS - 1
 
