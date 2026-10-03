@@ -32,6 +32,18 @@
   #define STN_DOT_RADIUS 3
 #endif
 
+#ifdef PBL_ROUND
+  // Centre-focused round menu: tall selected row, short neighbours
+  #define STN_ROUND_FOCUSED_HEIGHT MENU_CELL_ROUND_FOCUSED_SHORT_CELL_HEIGHT
+  #define STN_ROUND_UNFOCUSED_HEIGHT MENU_CELL_ROUND_UNFOCUSED_TALL_CELL_HEIGHT
+  #define STN_ROUND_HEADER_HEIGHT 24
+  #define STN_ROUND_FONT_HEADER FONT_KEY_GOTHIC_18_BOLD
+  #define STN_ROUND_FONT_NAME_SMALL FONT_KEY_GOTHIC_24
+  #define STN_ROUND_PAD 12
+  #define STN_ROUND_NAME_H 34
+  #define STN_ROUND_META_Y 36
+#endif
+
 static Window *s_window;
 static StatusBarLayer *s_status_bar;
 static MenuLayer *s_menu_layer;
@@ -80,6 +92,45 @@ static int16_t prv_get_cell_height(MenuLayer *menu_layer, MenuIndex *cell_index,
   return STN_ROW_HEIGHT;
 }
 
+#ifdef PBL_COLOR
+static const uint8_t s_svc_flags[] = {
+  SERVICE_SBAHN, SERVICE_UBAHN, SERVICE_BUS, SERVICE_ABAHN, SERVICE_FERRY, SERVICE_TRAIN
+};
+
+#define STN_DOT_SPACING (STN_DOT_RADIUS * 2 + 2)
+
+static GColor prv_service_color(uint8_t flag) {
+  switch (flag) {
+    case SERVICE_SBAHN: return GColorIslamicGreen;
+    case SERVICE_UBAHN: return GColorBlue;
+    case SERVICE_BUS:   return GColorRed;
+    case SERVICE_ABAHN: return GColorOrange;
+    case SERVICE_FERRY: return GColorTiffanyBlue;
+    case SERVICE_TRAIN: return GColorLightGray;
+    default:            return GColorDarkGray;
+  }
+}
+
+// Width of the row of service dots for these services (0 if none)
+static int prv_service_dots_width(uint8_t services) {
+  int n = 0;
+  for (int i = 0; i < (int)ARRAY_LENGTH(s_svc_flags); i++) {
+    if (services & s_svc_flags[i]) n++;
+  }
+  return n ? n * STN_DOT_SPACING - 2 : 0;
+}
+
+// Draw service dots left to right from x, centred vertically on cy
+static void prv_draw_service_dots(GContext *ctx, uint8_t services, int x, int cy) {
+  for (int i = 0; i < (int)ARRAY_LENGTH(s_svc_flags); i++) {
+    if (!(services & s_svc_flags[i])) continue;
+    graphics_context_set_fill_color(ctx, prv_service_color(s_svc_flags[i]));
+    graphics_fill_circle(ctx, GPoint(x + STN_DOT_RADIUS, cy), STN_DOT_RADIUS);
+    x += STN_DOT_SPACING;
+  }
+}
+#endif
+
 static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell_index, void *context) {
   Station *station;
   if (cell_index->section == SECTION_NEARBY) {
@@ -110,43 +161,11 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
   }
 
 #ifdef PBL_COLOR
-  // Draw service type dots below distance
-  if (station->services) {
-    static const uint8_t svc_flags[] = {
-      SERVICE_SBAHN, SERVICE_UBAHN, SERVICE_BUS, SERVICE_ABAHN, SERVICE_FERRY, SERVICE_TRAIN
-    };
-    int dot_r = STN_DOT_RADIUS;
-    int dot_spacing = dot_r * 2 + 2;
-
-    // Count active services
-    int num_dots = 0;
-    for (int i = 0; i < (int)ARRAY_LENGTH(svc_flags); i++) {
-      if (station->services & svc_flags[i]) num_dots++;
-    }
-    if (num_dots > 0) {
-      int total_w = num_dots * dot_spacing - 2;
-      // Right-align dots to match distance text
-      int start_x = bounds.size.w - 2 - total_w;
-      int dot_y = STN_ROW_HEIGHT - dot_r - 2;
-
-      int dx = 0;
-      for (int i = 0; i < (int)ARRAY_LENGTH(svc_flags); i++) {
-        if (!(station->services & svc_flags[i])) continue;
-        GColor c;
-        switch (svc_flags[i]) {
-          case SERVICE_SBAHN: c = GColorIslamicGreen; break;
-          case SERVICE_UBAHN: c = GColorBlue; break;
-          case SERVICE_BUS:   c = GColorRed; break;
-          case SERVICE_ABAHN: c = GColorOrange; break;
-          case SERVICE_FERRY: c = GColorTiffanyBlue; break;
-          case SERVICE_TRAIN: c = GColorLightGray; break;
-          default:            c = GColorDarkGray; break;
-        }
-        graphics_context_set_fill_color(ctx, c);
-        graphics_fill_circle(ctx, GPoint(start_x + dx + dot_r, dot_y), dot_r);
-        dx += dot_spacing;
-      }
-    }
+  // Service dots right-aligned under the distance
+  int dots_w = prv_service_dots_width(station->services);
+  if (dots_w > 0) {
+    prv_draw_service_dots(ctx, station->services, bounds.size.w - 2 - dots_w,
+                          STN_ROW_HEIGHT - STN_DOT_RADIUS - 2);
   }
 #endif
 }
