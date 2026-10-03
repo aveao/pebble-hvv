@@ -27,6 +27,7 @@ typedef struct {
   char direction[DIRECTION_LEN];
   int16_t minutes;
   int16_t delay;
+  bool cancelled;
 } Departure;
 
 void data_init(void);
@@ -36,7 +37,8 @@ int data_get_count(void);
 void data_set_count(int count);
 Departure *data_get_departure(int index);
 void data_update_departure(int index, const char *line, TransitType type,
-                           const char *direction, int16_t minutes, int16_t delay);
+                           const char *direction, int16_t minutes, int16_t delay,
+                           bool cancelled);
 
 const char *data_get_station_name(void);
 void data_set_station_name(const char *name);

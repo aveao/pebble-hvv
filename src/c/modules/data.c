@@ -31,7 +31,8 @@ Departure *data_get_departure(int index) {
 }
 
 void data_update_departure(int index, const char *line, TransitType type,
-                           const char *direction, int16_t minutes, int16_t delay) {
+                           const char *direction, int16_t minutes, int16_t delay,
+                           bool cancelled) {
   if (index < 0 || index >= MAX_DEPARTURES) return;
   Departure *dep = &s_departures[index];
   text_copy_utf8(dep->line, line, sizeof(dep->line));
@@ -39,6 +40,7 @@ void data_update_departure(int index, const char *line, TransitType type,
   text_copy_utf8(dep->direction, direction, sizeof(dep->direction));
   dep->minutes = minutes;
   dep->delay = delay;
+  dep->cancelled = cancelled;
 }
 
 const char *data_get_station_name(void) {

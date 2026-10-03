@@ -317,6 +317,8 @@ function sendDepartures(departures, station) {
     dict[keys.DEP_DIR + i]   = dep.direction;
     dict[keys.DEP_MINS + i]  = dep.minutes;
     dict[keys.DEP_DELAY + i] = dep.delay;
+    // Only sent when set, to keep messages small; the watch defaults to false
+    if (dep.cancelled) dict[keys.DEP_CANCELLED + i] = 1;
   }
 
   sendToWatch(dict, 'Departures');
@@ -341,6 +343,8 @@ function fetchDepartures(station) {
   }
 
   api.request('departureList', {
+    // GTI defaults to version 1, which lacks delay and cancelled (v19+)
+    version: 63,
     station: { name: station, type: 'STATION' },
     time: { date: 'heute', time: 'jetzt' },
     maxList: getMaxDepartures(),
@@ -366,6 +370,7 @@ function fetchDepartures(station) {
           minutes: d.timeOffset || 0,
           // GTI reports delay in seconds; the watch works in minutes
           delay: Math.round((d.delay || 0) / 60),
+          cancelled: !!d.cancelled,
         });
       }
       sendDepartures(departures, station);

@@ -64,6 +64,7 @@ static void prv_parse_departures(DictionaryIterator *iter) {
     Tuple *dir_t   = dict_find(iter, MESSAGE_KEY_DEP_DIR + i);
     Tuple *mins_t  = dict_find(iter, MESSAGE_KEY_DEP_MINS + i);
     Tuple *delay_t = dict_find(iter, MESSAGE_KEY_DEP_DELAY + i);
+    Tuple *cancelled_t = dict_find(iter, MESSAGE_KEY_DEP_CANCELLED + i);
 
     if (line_t && type_t && dir_t && mins_t) {
       data_update_departure(stored++,
@@ -71,7 +72,8 @@ static void prv_parse_departures(DictionaryIterator *iter) {
         prv_parse_transit_type(type_t->value->int32),
         dir_t->value->cstring,
         (int16_t)mins_t->value->int32,
-        delay_t ? (int16_t)delay_t->value->int32 : 0);
+        delay_t ? (int16_t)delay_t->value->int32 : 0,
+        cancelled_t && cancelled_t->value->int32);
     }
   }
   data_set_count(stored);

@@ -144,6 +144,12 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   GRect mins_rect = GRect(width - mins_w - 2, mins_y, mins_w, DIR_TEXT_H);
   graphics_draw_text(ctx, mins_buf, mins_font,
     mins_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+
+  // Strike through direction and minutes of cancelled departures
+  if (dep->cancelled) {
+    graphics_context_set_fill_color(ctx, PBL_IF_COLOR_ELSE(GColorRed, GColorBlack));
+    graphics_fill_rect(ctx, GRect(dir_x, cy - 1, width - 2 - dir_x, 2), 0, GCornerNone);
+  }
 }
 
 static void prv_content_update_proc(Layer *layer, GContext *ctx) {
