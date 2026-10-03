@@ -139,18 +139,20 @@ void comm_deinit(void) {
   app_message_deregister_callbacks();
 }
 
-void comm_request_departures(void) {
+bool comm_request_departures(const char *station_name) {
   DictionaryIterator *out;
   AppMessageResult result = app_message_outbox_begin(&out);
   if (result != APP_MSG_OK) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox begin failed: %d", (int)result);
-    return;
+    return false;
   }
-  dict_write_uint8(out, MESSAGE_KEY_REQUEST_DEPARTURES, 1);
+  dict_write_cstring(out, MESSAGE_KEY_REQUEST_DEPARTURES, station_name);
   result = app_message_outbox_send();
   if (result != APP_MSG_OK) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed: %d", (int)result);
+    return false;
   }
+  return true;
 }
 
 void comm_request_stations(void) {
@@ -161,20 +163,6 @@ void comm_request_stations(void) {
     return;
   }
   dict_write_uint8(out, MESSAGE_KEY_REQUEST_STATIONS, 1);
-  result = app_message_outbox_send();
-  if (result != APP_MSG_OK) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed: %d", (int)result);
-  }
-}
-
-void comm_select_station(const char *station_name) {
-  DictionaryIterator *out;
-  AppMessageResult result = app_message_outbox_begin(&out);
-  if (result != APP_MSG_OK) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox begin failed: %d", (int)result);
-    return;
-  }
-  dict_write_cstring(out, MESSAGE_KEY_SELECT_STATION, station_name);
   result = app_message_outbox_send();
   if (result != APP_MSG_OK) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed: %d", (int)result);

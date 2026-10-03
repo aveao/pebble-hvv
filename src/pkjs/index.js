@@ -37,9 +37,6 @@ function getMaxDepartures() {
   return Math.min(MAX_DEPARTURES, maxDeparturesLimit());
 }
 
-// Current station for departure fetches
-var currentStation = null;
-
 // Demo departure data
 var DEMO_DEPARTURES = [
   { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Ohlstedt',         minutes: 2,  delay: 0 },
@@ -306,12 +303,8 @@ function sendError(msg) {
   Pebble.sendAppMessage(dict);
 }
 
-function fetchDepartures() {
-  if (!currentStation) {
-    console.log('No station selected');
-    return;
-  }
-  console.log('fetchDepartures for: ' + currentStation);
+function fetchDepartures(station) {
+  console.log('fetchDepartures for: ' + station);
 
   var mode = api.getMode();
   if (mode === 'demo') {
@@ -321,7 +314,7 @@ function fetchDepartures() {
   }
 
   api.request('departureList', {
-    station: { name: currentStation, type: 'STATION' },
+    station: { name: station, type: 'STATION' },
     time: { date: 'heute', time: 'jetzt' },
     maxList: getMaxDepartures(),
     maxTimeOffset: 999,
@@ -371,7 +364,6 @@ Pebble.addEventListener('appmessage', function(e) {
   console.log('appmessage keys: ' + JSON.stringify(Object.keys(e.payload)));
   console.log('appmessage payload: ' + JSON.stringify(e.payload));
 
-  var selectVal = e.payload[keys.SELECT_STATION] || e.payload['SELECT_STATION'];
   var reqStations = e.payload[keys.REQUEST_STATIONS] || e.payload['REQUEST_STATIONS'];
   var reqDeps = e.payload[keys.REQUEST_DEPARTURES] || e.payload['REQUEST_DEPARTURES'];
 
@@ -379,14 +371,11 @@ Pebble.addEventListener('appmessage', function(e) {
     console.log('-> REQUEST_STATIONS');
     fetchStations();
   }
-  if (reqDeps) {
-    console.log('-> REQUEST_DEPARTURES');
-    fetchDepartures();
-  }
-  if (selectVal) {
-    currentStation = selectVal;
-    console.log('-> SELECT_STATION: ' + currentStation);
-    fetchDepartures();
+  // REQUEST_DEPARTURES carries the station name, so JS keeps no selection
+  // state that could go stale (e.g. if the JS runtime restarts)
+  if (typeof reqDeps === 'string' && reqDeps) {
+    console.log('-> REQUEST_DEPARTURES: ' + reqDeps);
+    fetchDepartures(reqDeps);
   }
 });
 

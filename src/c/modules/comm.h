@@ -9,6 +9,6 @@ typedef void (*CommErrorCallback)(const char *message);
 void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb,
                CommErrorCallback error_cb);
 void comm_deinit(void);
-void comm_request_departures(void);
+// Returns false if the outbox was busy and the request was not queued
+bool comm_request_departures(const char *station_name);
 void comm_request_stations(void);
-void comm_select_station(const char *station_name);

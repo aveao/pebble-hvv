@@ -160,11 +160,8 @@ static void prv_select_click(MenuLayer *menu_layer, MenuIndex *cell_index, void 
   }
   if (!station) return;
 
-  // Set station name for departure header and tell JS
+  // Departure window requests departures for this station when it appears
   data_set_station_name(station->name);
-  comm_select_station(station->name);
-
-  // Push departure window
   departure_window_push();
 }
 

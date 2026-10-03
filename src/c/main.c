@@ -6,6 +6,7 @@
 #include "windows/departure_window.h"
 
 #define REFRESH_INTERVAL_MS 30000
+#define RETRY_INTERVAL_MS 2000
 
 static AppTimer *s_refresh_timer;
 
@@ -21,17 +22,25 @@ static void prv_error(const char *message) {
   departure_window_show_error(message);
 }
 
+static void prv_refresh_timer_callback(void *context);
+
+static void prv_request_departures(void) {
+  // Retry soon if the outbox was busy, otherwise wait for the next refresh
+  bool sent = comm_request_departures(data_get_station_name());
+  s_refresh_timer = app_timer_register(sent ? REFRESH_INTERVAL_MS : RETRY_INTERVAL_MS,
+                                       prv_refresh_timer_callback, NULL);
+}
+
 static void prv_refresh_timer_callback(void *context) {
-  comm_request_departures();
-  s_refresh_timer = app_timer_register(REFRESH_INTERVAL_MS, prv_refresh_timer_callback, NULL);
+  prv_request_departures();
 }
 
 void app_start_departure_refresh(void) {
-  // Start the 30s refresh cycle for departures
+  // Request departures now, then every 30s
   if (s_refresh_timer) {
     app_timer_cancel(s_refresh_timer);
   }
-  s_refresh_timer = app_timer_register(REFRESH_INTERVAL_MS, prv_refresh_timer_callback, NULL);
+  prv_request_departures();
 }
 
 void app_stop_departure_refresh(void) {

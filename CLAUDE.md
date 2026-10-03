@@ -113,7 +113,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 - `wscript` — waf build configuration
 
 ### Data flow
-1. Watch sends `REQUEST_DEPARTURES` via AppMessage every 30s
+1. Watch sends `REQUEST_DEPARTURES` (carrying the station name) via AppMessage when the departure window appears and every 30s after
 2. JS receives request and dispatches via `api.request(...)` to one of the three adapter modes (see above)
 3. JS sends departure data back via AppMessage (DEP_COUNT, DEP_LINE[0..9], DEP_TYPE[0..9], etc.)
 4. Watch parses message, updates data model, refreshes MenuLayer
