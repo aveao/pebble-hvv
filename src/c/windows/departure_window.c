@@ -4,10 +4,6 @@
 #include "../modules/icons.h"
 #include "../modules/text.h"
 
-// Defined in main.c
-extern void app_start_departure_refresh(void);
-extern void app_stop_departure_refresh(void);
-
 #ifdef PBL_PLATFORM_EMERY
   #define ROW_HEIGHT 36
   #define BADGE_HEIGHT 24
@@ -50,6 +46,8 @@ extern void app_stop_departure_refresh(void);
 
 // Auto-close after 15 minutes to stop unnecessary API requests
 #define INACTIVITY_TIMEOUT_MS (15 * 60 * 1000)
+#define REFRESH_INTERVAL_MS 30000
+#define RETRY_INTERVAL_MS 2000
 
 static Window *s_window;
 static StatusBarLayer *s_status_bar;
@@ -58,6 +56,7 @@ static Layer *s_content_layer;
 static TextLayer *s_loading_layer;
 static bool s_received_data;
 static AppTimer *s_inactivity_timer;
+static AppTimer *s_refresh_timer;
 // Last fetch error; shown until the next successful refresh
 static char s_error[32];
 
@@ -210,8 +209,27 @@ static void prv_window_load(Window *window) {
   prv_update_content_size();
 }
 
+static void prv_refresh_timer_callback(void *context);
+
+static void prv_request_departures(void) {
+  // Retry soon if the outbox was busy, otherwise wait for the next refresh
+  bool sent = comm_request_departures(data_get_station_name());
+  s_refresh_timer = app_timer_register(sent ? REFRESH_INTERVAL_MS : RETRY_INTERVAL_MS,
+                                       prv_refresh_timer_callback, NULL);
+}
+
+static void prv_refresh_timer_callback(void *context) {
+  prv_request_departures();
+}
+
+static void prv_stop_refresh(void) {
+  if (s_refresh_timer) {
+    app_timer_cancel(s_refresh_timer);
+    s_refresh_timer = NULL;
+  }
+}
+
 static void prv_window_unload(Window *window) {
-  app_stop_departure_refresh();
   status_bar_layer_destroy(s_status_bar);
   scroll_layer_destroy(s_scroll_layer);
   layer_destroy(s_content_layer);
@@ -235,12 +253,14 @@ static void prv_window_appear(Window *window) {
   data_set_count(0);
   text_layer_set_text(s_loading_layer, "Loading...");
   prv_update_content_size();
-  app_start_departure_refresh();
+  // Request departures now, then every 30s
+  prv_stop_refresh();
+  prv_request_departures();
   s_inactivity_timer = app_timer_register(INACTIVITY_TIMEOUT_MS, prv_inactivity_timeout, NULL);
 }
 
 static void prv_window_disappear(Window *window) {
-  app_stop_departure_refresh();
+  prv_stop_refresh();
   if (s_inactivity_timer) {
     app_timer_cancel(s_inactivity_timer);
     s_inactivity_timer = NULL;
@@ -264,6 +284,13 @@ void departure_window_refresh(void) {
   s_received_data = true;
   s_error[0] = '\0';
   prv_update_content_size();
+}
+
+void departure_window_request_failed(void) {
+  // Only retry while the refresh cycle is running (window visible)
+  if (s_refresh_timer) {
+    app_timer_reschedule(s_refresh_timer, RETRY_INTERVAL_MS);
+  }
 }
 
 void departure_window_show_error(const char *message) {
