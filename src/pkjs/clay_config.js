@@ -102,6 +102,12 @@ module.exports = [
           "min": 10,
           "max": 30
         }
+      },
+      {
+        "type": "toggle",
+        "messageKey": "CONFIG_BOLD_TEXT",
+        "label": "Bold departure text",
+        "defaultValue": false
       }
     ]
   },

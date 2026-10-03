@@ -52,7 +52,8 @@
       "FAV_4",
       "FAV_5",
       "CONFIG_MAX_NEARBY",
-      "CONFIG_MAX_DEPARTURES"
+      "CONFIG_MAX_DEPARTURES",
+      "CONFIG_BOLD_TEXT"
     ],
     "projectRepositoryUrl": "https://github.com/aveao/pebble-hvv",
     "screenshots": [

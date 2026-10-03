@@ -97,6 +97,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 - `src/c/modules/data.c/.h` — Departure data model (TransitType enum, Departure struct, persistent storage)
 - `src/c/modules/comm.c/.h` — AppMessage handling (receive departures, send requests to JS)
 - `src/c/modules/icons.c/.h` — Programmatic transit type icon drawing (no bitmap resources)
+- `src/c/modules/settings.c/.h` — Watch-side display settings persisted in Storage (bold departure text on emery, sent from Clay as `CONFIG_BOLD_TEXT`)
 
 ### JS side (phone)
 - `src/pkjs/index.js` — Clay config init, AppMessage bridge, demo data, response parsing

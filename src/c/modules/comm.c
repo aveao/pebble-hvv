@@ -1,11 +1,13 @@
 #include "comm.h"
 #include "data.h"
 #include "stations.h"
+#include "settings.h"
 
 static CommDataCallback s_data_changed_callback;
 static CommStationsCallback s_stations_changed_callback;
 static CommErrorCallback s_error_callback;
 static CommRequestFailedCallback s_departures_failed_callback;
+static CommSettingsCallback s_settings_changed_callback;
 
 static TransitType prv_parse_transit_type(int32_t type_val) {
   switch (type_val) {
@@ -91,6 +93,16 @@ static bool prv_is_for_current_station(DictionaryIterator *iter) {
 }
 
 static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) {
+  // Settings saved on the phone
+  Tuple *bold_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_BOLD_TEXT);
+  if (bold_tuple) {
+    settings_set_bold_text(bold_tuple->value->int32 != 0);
+    if (s_settings_changed_callback) {
+      s_settings_changed_callback();
+    }
+    return;
+  }
+
   // Check for error message
   Tuple *error_tuple = dict_find(iter, MESSAGE_KEY_ERROR_MSG);
   if (error_tuple) {
@@ -135,11 +147,13 @@ static void prv_outbox_sent_handler(DictionaryIterator *iter, void *context) {
 }
 
 void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb,
-               CommErrorCallback error_cb, CommRequestFailedCallback departures_failed_cb) {
+               CommErrorCallback error_cb, CommRequestFailedCallback departures_failed_cb,
+               CommSettingsCallback settings_changed_cb) {
   s_data_changed_callback = data_changed_cb;
   s_stations_changed_callback = stations_changed_cb;
   s_error_callback = error_cb;
   s_departures_failed_callback = departures_failed_cb;
+  s_settings_changed_callback = settings_changed_cb;
 
   app_message_register_inbox_received(prv_inbox_received_handler);
   app_message_register_inbox_dropped(prv_inbox_dropped_handler);

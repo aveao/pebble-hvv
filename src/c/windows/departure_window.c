@@ -3,6 +3,7 @@
 #include "../modules/comm.h"
 #include "../modules/icons.h"
 #include "../modules/text.h"
+#include "../modules/settings.h"
 
 #ifdef PBL_PLATFORM_EMERY
   #define ROW_HEIGHT 36
@@ -23,6 +24,9 @@
   #define FONT_DIR_SMALL FONT_KEY_GOTHIC_18
   #define DIR_TEXT_H_SMALL 24
   #define DIR_TEXT_Y_NUDGE_SMALL 1
+  // Optional bold direction text (Display settings)
+  #define FONT_DIR_BOLD FONT_KEY_GOTHIC_24_BOLD
+  #define FONT_DIR_SMALL_BOLD FONT_KEY_GOTHIC_18_BOLD
 #else
   #define ROW_HEIGHT 34
   #define BADGE_HEIGHT 20
@@ -122,14 +126,22 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   int dir_w = width - dir_x - mins_w - 2;
 
   // Use large font if text fits, otherwise fall back to smaller font
-  GFont dir_font = fonts_get_system_font(FONT_DIR);
+#ifdef PBL_PLATFORM_EMERY
+  bool bold = settings_get_bold_text();
+  const char *dir_font_key = bold ? FONT_DIR_BOLD : FONT_DIR;
+  const char *dir_small_font_key = bold ? FONT_DIR_SMALL_BOLD : FONT_DIR_SMALL;
+#else
+  const char *dir_font_key = FONT_DIR;
+  const char *dir_small_font_key = FONT_DIR_SMALL;
+#endif
+  GFont dir_font = fonts_get_system_font(dir_font_key);
   GSize text_size = graphics_text_layout_get_content_size(
     dep->direction, dir_font, GRect(0, 0, 500, 100),
     GTextOverflowModeWordWrap, GTextAlignmentLeft);
   int text_h = DIR_TEXT_H;
   int nudge = DIR_TEXT_Y_NUDGE;
   if (text_size.w >= dir_w) {
-    dir_font = fonts_get_system_font(FONT_DIR_SMALL);
+    dir_font = fonts_get_system_font(dir_small_font_key);
     text_h = DIR_TEXT_H_SMALL;
     nudge = DIR_TEXT_Y_NUDGE_SMALL;
   }
@@ -305,6 +317,12 @@ void departure_window_refresh(void) {
   s_received_data = true;
   s_error[0] = '\0';
   prv_update_content_size();
+}
+
+void departure_window_redraw(void) {
+  if (s_content_layer) {
+    layer_mark_dirty(s_content_layer);
+  }
 }
 
 void departure_window_request_failed(void) {

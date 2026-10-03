@@ -21,15 +21,20 @@ var MAX_DEPARTURES = parseInt(localStorage.getItem('max_departures'), 10) || 10;
 var MAX_DEPARTURES_LIMIT_COLOR = 30;
 var MAX_DEPARTURES_LIMIT_BW = 15;
 
-function maxDeparturesLimit() {
+function getPlatform() {
   try {
-    var platform = Pebble.getActiveWatchInfo().platform;
-    if (platform && platform !== 'aplite' && platform !== 'diorite') {
-      return MAX_DEPARTURES_LIMIT_COLOR;
-    }
+    return Pebble.getActiveWatchInfo().platform || null;
   } catch (e) {
-    // Unknown platform: fall back to the limit that fits everywhere
+    return null;
   }
+}
+
+function maxDeparturesLimit() {
+  var platform = getPlatform();
+  if (platform && platform !== 'aplite' && platform !== 'diorite') {
+    return MAX_DEPARTURES_LIMIT_COLOR;
+  }
+  // Unknown platform: fall back to the limit that fits everywhere
   return MAX_DEPARTURES_LIMIT_BW;
 }
 
@@ -431,11 +436,22 @@ function setMaxDeparturesLimit(items, limit) {
   }
 }
 
+// Remove settings items by messageKey (e.g. options only one platform supports)
+function removeConfigItems(items, messageKeys) {
+  for (var i = items.length - 1; i >= 0; i--) {
+    var it = items[i];
+    if (it && it.items) removeConfigItems(it.items, messageKeys);
+    if (it && messageKeys.indexOf(it.messageKey) !== -1) items.splice(i, 1);
+  }
+}
+
 Pebble.addEventListener('showConfiguration', function() {
   var token = api.getWatchToken() || '(unavailable on this watch)';
   var configCopy = JSON.parse(JSON.stringify(clayConfig));
   substituteTokenPlaceholder(configCopy, token);
   setMaxDeparturesLimit(configCopy, maxDeparturesLimit());
+  // Bold text only has a layout tuned for emery
+  if (getPlatform() !== 'emery') removeConfigItems(configCopy, ['CONFIG_BOLD_TEXT']);
   var dynamicClay = new Clay(configCopy, null, { autoHandleEvents: false });
   Pebble.openURL(dynamicClay.generateUrl());
 });
@@ -478,6 +494,14 @@ Pebble.addEventListener('webviewclosed', function(e) {
     var d = Math.max(10, Math.min(maxDeparturesLimit(), parseInt(maxDeps, 10) || 10));
     localStorage.setItem('max_departures', d);
     MAX_DEPARTURES = d;
+  }
+
+  // The watch stores its own display settings
+  var bold = dict[keys.CONFIG_BOLD_TEXT];
+  if (bold !== undefined) {
+    var settings = {};
+    settings[keys.CONFIG_BOLD_TEXT] = bold ? 1 : 0;
+    sendToWatch(settings, 'Settings');
   }
 
   // Refresh station list
