@@ -1,4 +1,4 @@
-var Clay = require('pebble-clay');
+var Clay = require('@rebble/clay');
 var clayConfig = require('./clay_config');
 var clay = new Clay(clayConfig, null, { autoHandleEvents: false });
 
