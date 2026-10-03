@@ -34,7 +34,7 @@ static StatusBarLayer *s_status_bar;
 static MenuLayer *s_menu_layer;
 static TextLayer *s_loading_layer;
 static bool s_received_data;
-static bool s_requested;
+static bool s_appeared_before;
 
 static uint16_t prv_get_num_sections(MenuLayer *menu_layer, void *context) {
   return 2;
@@ -200,7 +200,6 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, menu_layer_get_layer(s_menu_layer));
 
   s_received_data = false;
-  s_requested = false;
   s_loading_layer = text_layer_create(GRect(10, bounds.size.h / 2 - 15, bounds.size.w - 20, 60));
   text_layer_set_text(s_loading_layer, "Loading stops...");
   text_layer_set_text_alignment(s_loading_layer, GTextAlignmentCenter);
@@ -217,14 +216,14 @@ static void prv_window_unload(Window *window) {
 }
 
 static void prv_window_appear(Window *window) {
-  // Favorites may already be on screen (restored from watch storage), but we
-  // still need the phone to resolve GPS-based nearby stations. Request once per
-  // launch - not on every appear, so returning from the departure list doesn't
-  // trigger a redundant GPS fetch.
-  if (!s_requested) {
-    s_requested = true;
+  // Favorites may already be on screen (restored from watch storage). JS
+  // sends the full list, including GPS-based nearby stations, on its own at
+  // startup, so only ask again when coming back to an empty list (e.g. the
+  // first fetch failed and nothing was cached)
+  if (s_appeared_before && stations_get_count() == 0) {
     comm_request_stations();
   }
+  s_appeared_before = true;
 }
 
 void station_window_push(void) {
