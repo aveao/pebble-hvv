@@ -276,10 +276,13 @@ function fetchStations() {
 
 // ---- Departures ----
 
-function sendDepartures(departures) {
+// DEP_STATION echoes the requested station so the watch can drop responses
+// that arrive after the user has moved on to another station.
+function sendDepartures(departures, station) {
   var dict = {};
   var count = Math.min(departures.length, getMaxDepartures());
   dict[keys.DEP_COUNT] = count;
+  dict[keys.DEP_STATION] = station;
 
   for (var i = 0; i < count; i++) {
     var dep = departures[i];
@@ -297,9 +300,10 @@ function sendDepartures(departures) {
   });
 }
 
-function sendError(msg) {
+function sendError(msg, station) {
   var dict = {};
   dict[keys.ERROR_MSG] = msg;
+  dict[keys.DEP_STATION] = station;
   Pebble.sendAppMessage(dict);
 }
 
@@ -309,7 +313,7 @@ function fetchDepartures(station) {
   var mode = api.getMode();
   if (mode === 'demo') {
     console.log('Demo mode, sending demo data');
-    sendDepartures(DEMO_DEPARTURES);
+    sendDepartures(DEMO_DEPARTURES, station);
     return;
   }
 
@@ -322,7 +326,7 @@ function fetchDepartures(station) {
   }, function(resp, err) {
     if (err) {
       console.log('departureList error: ' + err);
-      sendError(err);
+      sendError(err, station);
       return;
     }
     if (resp.departures && resp.departures.length > 0) {
@@ -341,9 +345,9 @@ function fetchDepartures(station) {
           delay: Math.round((d.delay || 0) / 60),
         });
       }
-      sendDepartures(departures);
+      sendDepartures(departures, station);
     } else {
-      sendDepartures([]);
+      sendDepartures([], station);
     }
   });
 }

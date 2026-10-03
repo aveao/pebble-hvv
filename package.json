@@ -30,6 +30,7 @@
     "messageKeys": [
       "REQUEST_DEPARTURES",
       "DEP_COUNT",
+      "DEP_STATION",
       "DEP_LINE[30]",
       "DEP_TYPE[30]",
       "DEP_DIR[30]",

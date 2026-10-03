@@ -231,7 +231,10 @@ static void prv_inactivity_timeout(void *context) {
 static void prv_window_appear(Window *window) {
   s_received_data = false;
   s_error[0] = '\0';
+  // Drop anything that arrived after the last departure window closed
+  data_set_count(0);
   text_layer_set_text(s_loading_layer, "Loading...");
+  prv_update_content_size();
   app_start_departure_refresh();
   s_inactivity_timer = app_timer_register(INACTIVITY_TIMEOUT_MS, prv_inactivity_timeout, NULL);
 }

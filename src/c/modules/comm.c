@@ -75,10 +75,18 @@ static void prv_parse_departures(DictionaryIterator *iter) {
   }
 }
 
+// Departure and error messages echo the station they were fetched for;
+// drop late responses for a station the user has since left.
+static bool prv_is_for_current_station(DictionaryIterator *iter) {
+  Tuple *station_t = dict_find(iter, MESSAGE_KEY_DEP_STATION);
+  return !station_t || strcmp(station_t->value->cstring, data_get_station_name()) == 0;
+}
+
 static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) {
   // Check for error message
   Tuple *error_tuple = dict_find(iter, MESSAGE_KEY_ERROR_MSG);
   if (error_tuple) {
+    if (!prv_is_for_current_station(iter)) return;
     APP_LOG(APP_LOG_LEVEL_ERROR, "JS error: %s", error_tuple->value->cstring);
     if (s_error_callback) {
       s_error_callback(error_tuple->value->cstring);
@@ -94,6 +102,7 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
 
   // Departure data message?
   if (dict_find(iter, MESSAGE_KEY_DEP_COUNT)) {
+    if (!prv_is_for_current_station(iter)) return;
     prv_parse_departures(iter);
     return;
   }
