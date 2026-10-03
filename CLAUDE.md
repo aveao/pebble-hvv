@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pebble smartwatch app (SDK v3) for HVV (Hamburger Verkehrsverbund) transit departures. Displays real-time departures for a configurable station using the GTI API (gti.geofox.de). Targets platforms: aplite, basalt, diorite, emery.
+Pebble smartwatch app (SDK v3) for HVV (Hamburger Verkehrsverbund) transit departures. Displays real-time departures for a configurable station using the GTI API (gti.geofox.de). Targets platforms: aplite, basalt, diorite, emery, gabbro.
 
 This is a watchapp (not a watchface).
 
@@ -41,6 +41,15 @@ Never hardcode screen dimensions — use `layer_get_bounds()` on the window's ro
 
 Emery has a 200x228 display (~1.4x basalt's 144x168). UI elements use `#ifdef PBL_PLATFORM_EMERY` to define scaled sizes — roughly 1.5x for dimensions and one font size up (GOTHIC_18→GOTHIC_24, GOTHIC_14→GOTHIC_18). Pebble's built-in Gothic fonts have varying amounts of internal top padding at different sizes, so vertical nudge values (`_Y_NUDGE`) need per-platform tuning. Always test on both basalt and emery emulators when changing layout constants.
 
+### Round (gabbro)
+
+Gabbro is round, 260x260, color, with a touchscreen. It shares emery's size tables (`#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)`); round-specific behaviour keys on `PBL_ROUND`, never platform names.
+
+- Departure list: each row is inset with `round_inset()` (`src/c/modules/round.c`) from its on-screen position, so badge and minutes stay inside the circle; rows with no room left draw only their background. Extra bottom padding lets the last row reach the middle. `round_inset()` returns 0 on rectangular screens, so the rectangular path is unchanged.
+- Station list: centre-focused round `MenuLayer`, selected row taller (68 px with the distance/services line, 44 px for one-line rows like favorites) than neighbours (32 px). **MenuLayer caches the new selection's position using the old row's selected height, leaving a gap, and reloading during its selection animation crashes.** So on round the window handles up/down/select itself, tracks the selection (`s_round_sel`), sizes rows from it, reloads, then jumps the menu's selection without animation.
+- Touch navigation (`app_touch_navigation_enable`, under `#ifdef PBL_TOUCH`) is a watch setting, default on, applied in `settings.c`. The emulator cannot inject touch; test on a device.
+- Test settings in the emulator with `pebble send-app-message --emulator <p> --int <key>=<value>`, numeric keys from `build/js/message_keys.json`.
+
 Tag platform-specific image resources with `~bw` or `~color` suffixes.
 
 ### Gotchas worth remembering
@@ -75,7 +84,7 @@ Use `static` variables within modules for encapsulation. Expose only necessary f
 
 ```bash
 pebble build                       # Build for all target platforms
-pebble install --emulator basalt   # Install to emulator (aplite, basalt, diorite, emery)
+pebble install --emulator basalt   # Install to emulator (aplite, basalt, diorite, emery, gabbro)
 pebble install --phone <IP>        # Install to phone
 pebble logs                        # View app logs (run right after install to not miss logs)
 pebble screenshot --emulator basalt  # Take screenshot (saves to cwd, delete after viewing)
@@ -97,7 +106,8 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 - `src/c/modules/data.c/.h` — Departure data model (TransitType enum, Departure struct, persistent storage)
 - `src/c/modules/comm.c/.h` — AppMessage handling (receive departures, send requests to JS)
 - `src/c/modules/icons.c/.h` — Programmatic transit type icon drawing (no bitmap resources)
-- `src/c/modules/settings.c/.h` — Watch-side display settings persisted in Storage (bold departure text on emery, sent from Clay as `CONFIG_BOLD_TEXT`)
+- `src/c/modules/round.c/.h` — `round_inset()` for fitting rows to round screens
+- `src/c/modules/settings.c/.h` — Watch-side settings persisted in Storage: bold departure text (emery, gabbro) and touch navigation (default on), sent from Clay as `CONFIG_BOLD_TEXT` / `CONFIG_TOUCH_NAV`
 
 ### JS side (phone)
 - `src/pkjs/index.js` — Clay config init, AppMessage bridge, demo data, response parsing
@@ -110,7 +120,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 - `src/pkjs/hmac.js` — HMAC-SHA1 + Base64 for the BYO path
 
 ### Config & build
-- `package.json` — Pebble app manifest (UUID, platforms, message keys, Clay dependency)
+- `package.json` — Pebble app manifest (UUID, platforms, message keys, Clay dependency). Clay is `@rebble/clay`, Rebble's maintained fork; the original `pebble-clay` (last released 2022) has no gabbro/flint binaries and fails the build
 - `wscript` — waf build configuration
 
 ### Data flow

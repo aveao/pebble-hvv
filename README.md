@@ -30,7 +30,7 @@ And yeah, it is developed with Claude Code.
   - S-Bahn: circle
   - Bus: hexagon
   - Ferry: trapezoid
-- **All rectangular Pebble platforms** — supports aplite, basalt, diorite, and emery (color and B&W)
+- **Rectangular and round Pebbles** — supports aplite, basalt, diorite, emery, and gabbro (color and B&W, with touch navigation on touchscreen watches)
 
 ## Setup
 
