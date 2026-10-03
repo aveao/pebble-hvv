@@ -35,6 +35,8 @@
 #ifdef PBL_ROUND
   // Centre-focused round menu: tall selected row, short neighbours
   #define STN_ROUND_FOCUSED_HEIGHT MENU_CELL_ROUND_FOCUSED_SHORT_CELL_HEIGHT
+  // Selected row without a distance/services line (e.g. favorites)
+  #define STN_ROUND_FOCUSED_ONE_LINE_HEIGHT 44
   #define STN_ROUND_UNFOCUSED_HEIGHT MENU_CELL_ROUND_UNFOCUSED_TALL_CELL_HEIGHT
   #define STN_ROUND_HEADER_HEIGHT 24
   #define STN_ROUND_FONT_HEADER FONT_KEY_GOTHIC_18_BOLD
@@ -63,15 +65,39 @@ static uint16_t prv_get_num_rows(MenuLayer *menu_layer, uint16_t section_index, 
   }
 }
 
+static Station *prv_station_at(const MenuIndex *index) {
+  return index->section == SECTION_NEARBY
+    ? stations_get_nearby(index->row) : stations_get_favorite(index->row);
+}
+
+#ifdef PBL_ROUND
+// Selected nearby stations get a second line with distance and service dots;
+// favorites have neither, so their selected row stays one line tall
+static bool prv_has_meta_line(const Station *station) {
+  return station && station->type == STATION_NEARBY &&
+         (station->distance > 0 || station->services);
+}
+#endif
+
 static int16_t prv_get_header_height(MenuLayer *menu_layer, uint16_t section_index, void *context) {
   // Hide section header if empty
   if (section_index == SECTION_NEARBY && stations_get_nearby_count() == 0) return 0;
   if (section_index == SECTION_FAVORITES && stations_get_favorite_count() == 0) return 0;
-  return STN_HEADER_HEIGHT;
+  return PBL_IF_ROUND_ELSE(STN_ROUND_HEADER_HEIGHT, STN_HEADER_HEIGHT);
 }
 
 static void prv_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t section_index, void *context) {
   GRect bounds = layer_get_bounds(cell_layer);
+
+#ifdef PBL_ROUND
+  // Small centred caps label instead of a full-width bar
+  graphics_context_set_text_color(ctx, GColorDarkGray);
+  const char *label = (section_index == SECTION_NEARBY) ? "NEARBY" : "FAVORITES";
+  graphics_draw_text(ctx, label, fonts_get_system_font(STN_ROUND_FONT_HEADER),
+    GRect(0, -2, bounds.size.w, STN_ROUND_HEADER_HEIGHT),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  return;
+#endif
 
 #ifdef PBL_COLOR
   graphics_context_set_fill_color(ctx, GColorDarkGray);
@@ -88,8 +114,36 @@ static void prv_draw_header(GContext *ctx, const Layer *cell_layer, uint16_t sec
     text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
+#ifdef PBL_ROUND
+// Selected row on round, tracked by us rather than read from MenuLayer. The
+// selected row is taller than its neighbours, and MenuLayer caches the new
+// selection's position using the old row's selected height (a reload doesn't
+// fix it), leaving a gap. So rows are sized from this, and the menu's own
+// selection is only moved after heights are up to date (see prv_round_select)
+static MenuIndex s_round_sel;
+
+static bool prv_is_valid_row(MenuIndex index) {
+  return index.section <= SECTION_NEARBY &&
+         index.row < prv_get_num_rows(NULL, index.section, NULL);
+}
+
+static MenuIndex prv_first_row(void) {
+  return MenuIndex(stations_get_favorite_count() > 0 ? SECTION_FAVORITES : SECTION_NEARBY, 0);
+}
+
+static bool prv_is_selected_row(MenuIndex *index) {
+  return index->section == s_round_sel.section && index->row == s_round_sel.row;
+}
+#endif
+
 static int16_t prv_get_cell_height(MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
+#ifdef PBL_ROUND
+  if (!prv_is_selected_row(cell_index)) return STN_ROUND_UNFOCUSED_HEIGHT;
+  return prv_has_meta_line(prv_station_at(cell_index))
+    ? STN_ROUND_FOCUSED_HEIGHT : STN_ROUND_FOCUSED_ONE_LINE_HEIGHT;
+#else
   return STN_ROW_HEIGHT;
+#endif
 }
 
 #ifdef PBL_COLOR
@@ -131,14 +185,60 @@ static void prv_draw_service_dots(GContext *ctx, uint8_t services, int x, int cy
 }
 #endif
 
-static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell_index, void *context) {
-  Station *station;
-  if (cell_index->section == SECTION_NEARBY) {
-    station = stations_get_nearby(cell_index->row);
-  } else {
-    station = stations_get_favorite(cell_index->row);
+#ifdef PBL_ROUND
+// Centre-focused round row: the selected station large with distance and
+// service dots underneath; neighbours show just their name, smaller
+static void prv_draw_row_round(GContext *ctx, const Layer *cell_layer, Station *station) {
+  GRect bounds = layer_get_bounds(cell_layer);
+  int16_t text_w = bounds.size.w - 2 * STN_ROUND_PAD;
+
+  if (!menu_cell_layer_is_highlighted(cell_layer)) {
+    graphics_draw_text(ctx, station->name, fonts_get_system_font(STN_ROUND_FONT_NAME_SMALL),
+      GRect(STN_ROUND_PAD, (bounds.size.h - 30) / 2 - 2, text_w, 30),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+    return;
   }
+
+  bool has_meta = prv_has_meta_line(station);
+  int16_t name_y = has_meta ? 0 : (bounds.size.h - STN_ROUND_NAME_H) / 2 - 1;
+  graphics_draw_text(ctx, station->name, fonts_get_system_font(STN_FONT_NAME),
+    GRect(STN_ROUND_PAD, name_y, text_w, STN_ROUND_NAME_H),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  if (!has_meta) return;
+
+  // "120m ●●●" centred as one group
+  char dist_buf[8] = "";
+  if (station->distance > 0) {
+    snprintf(dist_buf, sizeof(dist_buf), "%dm", station->distance * 10);
+  }
+  GFont dist_font = fonts_get_system_font(STN_FONT_DIST);
+  GSize dist_size = GSize(0, 0);
+  if (dist_buf[0]) {
+    dist_size = graphics_text_layout_get_content_size(dist_buf, dist_font,
+      GRect(0, 0, text_w, 30), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
+  }
+  int dots_w = prv_service_dots_width(station->services);
+  int gap = (dist_size.w > 0 && dots_w > 0) ? 6 : 0;
+  int x = (bounds.size.w - (dist_size.w + gap + dots_w)) / 2;
+  if (dist_buf[0]) {
+    graphics_draw_text(ctx, dist_buf, dist_font,
+      GRect(x, STN_ROUND_META_Y - 6, dist_size.w + 2, 30),
+      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  }
+  if (dots_w > 0) {
+    prv_draw_service_dots(ctx, station->services, x + dist_size.w + gap, STN_ROUND_META_Y + 10);
+  }
+}
+#endif
+
+static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell_index, void *context) {
+  Station *station = prv_station_at(cell_index);
   if (!station) return;
+
+#ifdef PBL_ROUND
+  prv_draw_row_round(ctx, cell_layer, station);
+  return;
+#endif
 
   GRect bounds = layer_get_bounds(cell_layer);
 
@@ -171,18 +271,81 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
 }
 
 static void prv_select_click(MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
-  Station *station;
-  if (cell_index->section == SECTION_NEARBY) {
-    station = stations_get_nearby(cell_index->row);
-  } else {
-    station = stations_get_favorite(cell_index->row);
-  }
+  Station *station = prv_station_at(cell_index);
   if (!station) return;
 
   // Departure window requests departures for this station when it appears
   data_set_station_name(station->name);
   departure_window_push();
 }
+
+#ifdef PBL_ROUND
+// Select a row on round: update our selection so rows are measured for it,
+// reload, then jump the menu's selection there without animation (reloading
+// during MenuLayer's own selection animation crashes)
+static void prv_round_select(MenuIndex index) {
+  s_round_sel = index;
+  menu_layer_reload_data(s_menu_layer);
+  menu_layer_set_selected_index(s_menu_layer, index, MenuRowAlignCenter, false);
+}
+
+// Keep the round selection on a real row when the list changes
+static void prv_round_sync_selection(void) {
+  if (!prv_is_valid_row(s_round_sel)) s_round_sel = prv_first_row();
+  if (prv_is_valid_row(s_round_sel)) {
+    prv_round_select(s_round_sel);
+  } else {
+    menu_layer_reload_data(s_menu_layer);
+  }
+}
+
+// Next/previous real row, crossing between sections; false at either end
+static bool prv_round_step(MenuIndex *index, bool up) {
+  MenuIndex i = *index;
+  if (up) {
+    if (i.row > 0) {
+      i.row--;
+    } else if (i.section == SECTION_NEARBY && stations_get_favorite_count() > 0) {
+      i = MenuIndex(SECTION_FAVORITES, stations_get_favorite_count() - 1);
+    } else {
+      return false;
+    }
+  } else {
+    if (i.row + 1 < prv_get_num_rows(NULL, i.section, NULL)) {
+      i.row++;
+    } else if (i.section == SECTION_FAVORITES && stations_get_nearby_count() > 0) {
+      i = MenuIndex(SECTION_NEARBY, 0);
+    } else {
+      return false;
+    }
+  }
+  *index = i;
+  return true;
+}
+
+static void prv_round_move(bool up) {
+  MenuIndex next = s_round_sel;
+  if (prv_round_step(&next, up)) prv_round_select(next);
+}
+
+static void prv_round_up_click(ClickRecognizerRef recognizer, void *context) {
+  prv_round_move(true);
+}
+
+static void prv_round_down_click(ClickRecognizerRef recognizer, void *context) {
+  prv_round_move(false);
+}
+
+static void prv_round_select_click(ClickRecognizerRef recognizer, void *context) {
+  if (prv_is_valid_row(s_round_sel)) prv_select_click(s_menu_layer, &s_round_sel, NULL);
+}
+
+static void prv_round_click_config(void *context) {
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, prv_round_up_click);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, prv_round_down_click);
+  window_single_click_subscribe(BUTTON_ID_SELECT, prv_round_select_click);
+}
+#endif
 
 static void prv_update_loading_visibility(void) {
   bool has_data = stations_get_count() > 0;
@@ -212,11 +375,18 @@ static void prv_window_load(Window *window) {
     .draw_row = prv_draw_row,
     .select_click = prv_select_click,
   });
+#ifdef PBL_ROUND
+  window_set_click_config_provider(window, prv_round_click_config);
+#else
   menu_layer_set_click_config_onto_window(s_menu_layer, window);
+#endif
 #ifdef PBL_COLOR
   menu_layer_set_highlight_colors(s_menu_layer, GColorCobaltBlue, GColorWhite);
 #endif
   layer_add_child(window_layer, menu_layer_get_layer(s_menu_layer));
+#ifdef PBL_ROUND
+  prv_round_sync_selection();  // favorites may already be cached
+#endif
 
   s_received_data = false;
   s_loading_layer = text_layer_create(GRect(10, bounds.size.h / 2 - 15, bounds.size.w - 20, 60));
@@ -231,6 +401,7 @@ static void prv_window_load(Window *window) {
 static void prv_window_unload(Window *window) {
   status_bar_layer_destroy(s_status_bar);
   menu_layer_destroy(s_menu_layer);
+  s_menu_layer = NULL;
   text_layer_destroy(s_loading_layer);
 }
 
@@ -258,7 +429,11 @@ void station_window_push(void) {
 void station_window_refresh(void) {
   s_received_data = true;
   if (s_menu_layer) {
+#ifdef PBL_ROUND
+    prv_round_sync_selection();
+#else
     menu_layer_reload_data(s_menu_layer);
+#endif
     prv_update_loading_visibility();
   }
 }
