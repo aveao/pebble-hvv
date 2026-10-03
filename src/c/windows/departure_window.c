@@ -44,7 +44,7 @@
   #define DIR_TEXT_Y_NUDGE_SMALL 1
 #endif
 
-// Auto-close after 15 minutes to stop unnecessary API requests
+// Auto-close after 15 minutes without scrolling to stop unnecessary API requests
 #define INACTIVITY_TIMEOUT_MS (15 * 60 * 1000)
 #define REFRESH_INTERVAL_MS 30000
 #define RETRY_INTERVAL_MS 2000
@@ -179,6 +179,23 @@ static void prv_update_content_size(void) {
   }
 }
 
+static void prv_inactivity_timeout(void *context) {
+  s_inactivity_timer = NULL;
+  window_stack_pop(true);
+}
+
+static void prv_reset_inactivity_timer(void) {
+  if (s_inactivity_timer) {
+    app_timer_reschedule(s_inactivity_timer, INACTIVITY_TIMEOUT_MS);
+  } else {
+    s_inactivity_timer = app_timer_register(INACTIVITY_TIMEOUT_MS, prv_inactivity_timeout, NULL);
+  }
+}
+
+static void prv_scrolled(ScrollLayer *scroll_layer, void *context) {
+  prv_reset_inactivity_timer();
+}
+
 static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
@@ -192,6 +209,9 @@ static void prv_window_load(Window *window) {
   s_scroll_layer = scroll_layer_create(scroll_bounds);
   scroll_layer_set_shadow_hidden(s_scroll_layer, true);
   scroll_layer_set_click_config_onto_window(s_scroll_layer, window);
+  scroll_layer_set_callbacks(s_scroll_layer, (ScrollLayerCallbacks) {
+    .content_offset_changed_handler = prv_scrolled,
+  });
   layer_add_child(window_layer, scroll_layer_get_layer(s_scroll_layer));
 
   // Content layer drawn inside scroll layer
@@ -241,11 +261,6 @@ static void prv_window_unload(Window *window) {
   s_window = NULL;
 }
 
-static void prv_inactivity_timeout(void *context) {
-  s_inactivity_timer = NULL;
-  window_stack_pop(true);
-}
-
 static void prv_window_appear(Window *window) {
   s_received_data = false;
   s_error[0] = '\0';
@@ -256,7 +271,7 @@ static void prv_window_appear(Window *window) {
   // Request departures now, then every 30s
   prv_stop_refresh();
   prv_request_departures();
-  s_inactivity_timer = app_timer_register(INACTIVITY_TIMEOUT_MS, prv_inactivity_timeout, NULL);
+  prv_reset_inactivity_timer();
 }
 
 static void prv_window_disappear(Window *window) {
