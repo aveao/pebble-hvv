@@ -309,6 +309,18 @@ function fetchStations() {
 
 // DEP_STATION echoes the requested station so the watch can drop responses
 // that arrive after the user has moved on to another station.
+// GTI lists departures by scheduled time, so a delayed service that was due a
+// few minutes ago stays on top. Order by when they'll actually leave instead
+// (scheduled + delay), keeping GTI's order for departures in the same minute
+function sortByExpectedTime(departures) {
+  return departures
+    .map(function(dep, i) { return { dep: dep, i: i }; })
+    .sort(function(a, b) {
+      return (a.dep.minutes + a.dep.delay) - (b.dep.minutes + b.dep.delay) || a.i - b.i;
+    })
+    .map(function(entry) { return entry.dep; });
+}
+
 function sendDepartures(departures, station) {
   var dict = {};
   var count = Math.min(departures.length, getMaxDepartures());
@@ -378,7 +390,7 @@ function fetchDepartures(station) {
           cancelled: !!d.cancelled,
         });
       }
-      sendDepartures(departures, station);
+      sendDepartures(sortByExpectedTime(departures), station);
     } else {
       sendDepartures([], station);
     }
