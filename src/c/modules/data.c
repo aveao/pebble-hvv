@@ -2,19 +2,13 @@
 #include "text.h"
 #include <pebble.h>
 
-#define PERSIST_KEY_STATION 1
-
 static Departure s_departures[MAX_DEPARTURES];
 static int s_departure_count;
 static char s_station_name[STATION_NAME_LEN];
 
 void data_init(void) {
   s_departure_count = 0;
-  if (persist_exists(PERSIST_KEY_STATION)) {
-    persist_read_string(PERSIST_KEY_STATION, s_station_name, sizeof(s_station_name));
-  } else {
-    strncpy(s_station_name, "HVV Departures", sizeof(s_station_name));
-  }
+  s_station_name[0] = '\0';
 }
 
 void data_deinit(void) {
@@ -53,5 +47,4 @@ const char *data_get_station_name(void) {
 
 void data_set_station_name(const char *name) {
   text_copy_utf8(s_station_name, name, sizeof(s_station_name));
-  persist_write_string(PERSIST_KEY_STATION, s_station_name);
 }
