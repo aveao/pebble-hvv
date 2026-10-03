@@ -21,8 +21,10 @@ static void prv_parse_stations(DictionaryIterator *iter) {
   Tuple *count_tuple = dict_find(iter, MESSAGE_KEY_STATION_COUNT);
   if (!count_tuple) return;
 
+  // Only count entries that actually arrived, so a missing index can't
+  // leave a stale slot from a previous message in the list
   int count = count_tuple->value->int32;
-  stations_set_count(count);
+  int stored = 0;
 
   for (int i = 0; i < count && i < MAX_STATIONS; i++) {
     Tuple *name_t = dict_find(iter, MESSAGE_KEY_STATION_NAME + i);
@@ -31,13 +33,14 @@ static void prv_parse_stations(DictionaryIterator *iter) {
     Tuple *svc_t  = dict_find(iter, MESSAGE_KEY_STATION_SERVICES + i);
 
     if (name_t) {
-      stations_update(i,
+      stations_update(stored++,
         name_t->value->cstring,
         (fav_t && fav_t->value->int32) ? STATION_FAVORITE : STATION_NEARBY,
         dist_t ? (uint8_t)dist_t->value->int32 : 0,
         svc_t ? (uint8_t)svc_t->value->int32 : 0);
     }
   }
+  stations_set_count(stored);
 
   // Cache favorites on the watch so they render instantly on the next launch.
   stations_save_favorites();
@@ -51,8 +54,9 @@ static void prv_parse_departures(DictionaryIterator *iter) {
   Tuple *count_tuple = dict_find(iter, MESSAGE_KEY_DEP_COUNT);
   if (!count_tuple) return;
 
+  // See prv_parse_stations: compact to the entries that arrived
   int count = count_tuple->value->int32;
-  data_set_count(count);
+  int stored = 0;
 
   for (int i = 0; i < count && i < MAX_DEPARTURES; i++) {
     Tuple *line_t  = dict_find(iter, MESSAGE_KEY_DEP_LINE + i);
@@ -62,7 +66,7 @@ static void prv_parse_departures(DictionaryIterator *iter) {
     Tuple *delay_t = dict_find(iter, MESSAGE_KEY_DEP_DELAY + i);
 
     if (line_t && type_t && dir_t && mins_t) {
-      data_update_departure(i,
+      data_update_departure(stored++,
         line_t->value->cstring,
         prv_parse_transit_type(type_t->value->int32),
         dir_t->value->cstring,
@@ -70,6 +74,7 @@ static void prv_parse_departures(DictionaryIterator *iter) {
         delay_t ? (int16_t)delay_t->value->int32 : 0);
     }
   }
+  data_set_count(stored);
 
   if (s_data_changed_callback) {
     s_data_changed_callback();
