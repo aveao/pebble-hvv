@@ -63,7 +63,9 @@
       ".assets/basalt_screenshot_hbf.png",
       ".assets/basalt_screenshot_berliner_tor.png",
       ".assets/emery_screenshot_mainpage.png",
-      ".assets/emery_screenshot_jungfernstieg.png"
+      ".assets/emery_screenshot_jungfernstieg.png",
+      ".assets/gabbro_screenshot_mainpage.png",
+      ".assets/gabbro_screenshot_hbf.png"
     ],
     "resources": {
       "media": [

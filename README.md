@@ -16,6 +16,12 @@ A Pebble smartwatch app that displays real-time HVV (Hamburger Verkehrsverbund) 
   <img src=".assets/emery_screenshot_jungfernstieg.png" alt="Hamburg Hbf departures (Pebble Time 2)" width="228">
 </p>
 
+<p align="center">
+  <img src=".assets/gabbro_screenshot_mainpage.png" alt="Station list (Pebble Round 2)" width="260">
+  &nbsp;&nbsp;
+  <img src=".assets/gabbro_screenshot_hbf.png" alt="Hamburg Hbf departures (Pebble Round 2)" width="260">
+</p>
+
 And yeah, it is developed with Claude Code.
 
 **Privacy policy:** Out of the box the app sends a small amount of data (watch serial, IP, plus the station name or GPS coordinates of the request you make) to a shared proxy that forwards to HVV. Nothing is sold, and there is no third-party analytics (outside of what Cloudflare Workers provides). See [PRIVACY.md](./PRIVACY.md) for the full breakdown of what's collected, what's logged, and your GDPR rights. This is in place as requesting an API key is a lengthy process, and I'm only allowed to share timetable information and not the API key itself.
