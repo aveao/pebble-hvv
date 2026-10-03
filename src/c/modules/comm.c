@@ -4,6 +4,7 @@
 
 static CommDataCallback s_data_changed_callback;
 static CommStationsCallback s_stations_changed_callback;
+static CommErrorCallback s_error_callback;
 
 static TransitType prv_parse_transit_type(int32_t type_val) {
   switch (type_val) {
@@ -79,6 +80,9 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
   Tuple *error_tuple = dict_find(iter, MESSAGE_KEY_ERROR_MSG);
   if (error_tuple) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "JS error: %s", error_tuple->value->cstring);
+    if (s_error_callback) {
+      s_error_callback(error_tuple->value->cstring);
+    }
     return;
   }
 
@@ -108,9 +112,11 @@ static void prv_outbox_sent_handler(DictionaryIterator *iter, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Outbox sent");
 }
 
-void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb) {
+void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb,
+               CommErrorCallback error_cb) {
   s_data_changed_callback = data_changed_cb;
   s_stations_changed_callback = stations_changed_cb;
+  s_error_callback = error_cb;
 
   app_message_register_inbox_received(prv_inbox_received_handler);
   app_message_register_inbox_dropped(prv_inbox_dropped_handler);

@@ -17,6 +17,10 @@ static void prv_stations_changed(void) {
   station_window_refresh();
 }
 
+static void prv_error(const char *message) {
+  departure_window_show_error(message);
+}
+
 static void prv_refresh_timer_callback(void *context) {
   comm_request_departures();
   s_refresh_timer = app_timer_register(REFRESH_INTERVAL_MS, prv_refresh_timer_callback, NULL);
@@ -40,7 +44,7 @@ void app_stop_departure_refresh(void) {
 static void prv_init(void) {
   data_init();
   stations_init();
-  comm_init(prv_data_changed, prv_stations_changed);
+  comm_init(prv_data_changed, prv_stations_changed, prv_error);
   station_window_push();
 }
 

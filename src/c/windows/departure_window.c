@@ -57,6 +57,8 @@ static Layer *s_content_layer;
 static TextLayer *s_loading_layer;
 static bool s_received_data;
 static AppTimer *s_inactivity_timer;
+// Last fetch error; shown until the next successful refresh
+static char s_error[32];
 
 static int16_t prv_get_content_height(void) {
   return HEADER_HEIGHT + data_get_count() * ROW_HEIGHT;
@@ -74,7 +76,8 @@ static void prv_draw_header(GContext *ctx, GRect bounds, int16_t width) {
 
   graphics_context_set_text_color(ctx, GColorWhite);
   GRect text_rect = GRect(4, HEADER_TEXT_Y, width - 8, HEADER_HEIGHT);
-  graphics_draw_text(ctx, data_get_station_name(),
+  const char *title = s_error[0] ? s_error : data_get_station_name();
+  graphics_draw_text(ctx, title,
     fonts_get_system_font(FONT_HEADER),
     text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
@@ -169,7 +172,9 @@ static void prv_update_content_size(void) {
 
   bool has_data = data_get_count() > 0;
   layer_set_hidden(text_layer_get_layer(s_loading_layer), has_data);
-  if (!has_data && s_received_data) {
+  if (!has_data && s_error[0]) {
+    text_layer_set_text(s_loading_layer, s_error);
+  } else if (!has_data && s_received_data) {
     text_layer_set_text(s_loading_layer, "No departures");
   }
 }
@@ -224,6 +229,7 @@ static void prv_inactivity_timeout(void *context) {
 
 static void prv_window_appear(Window *window) {
   s_received_data = false;
+  s_error[0] = '\0';
   text_layer_set_text(s_loading_layer, "Loading...");
   app_start_departure_refresh();
   s_inactivity_timer = app_timer_register(INACTIVITY_TIMEOUT_MS, prv_inactivity_timeout, NULL);
@@ -252,5 +258,12 @@ void departure_window_push(void) {
 
 void departure_window_refresh(void) {
   s_received_data = true;
+  s_error[0] = '\0';
+  prv_update_content_size();
+}
+
+void departure_window_show_error(const char *message) {
+  strncpy(s_error, message, sizeof(s_error) - 1);
+  s_error[sizeof(s_error) - 1] = '\0';
   prv_update_content_size();
 }

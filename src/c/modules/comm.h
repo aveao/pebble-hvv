@@ -4,8 +4,10 @@
 
 typedef void (*CommDataCallback)(void);
 typedef void (*CommStationsCallback)(void);
+typedef void (*CommErrorCallback)(const char *message);
 
-void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb);
+void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb,
+               CommErrorCallback error_cb);
 void comm_deinit(void);
 void comm_request_departures(void);
 void comm_request_stations(void);
