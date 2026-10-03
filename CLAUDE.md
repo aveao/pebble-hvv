@@ -122,7 +122,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 
 Default for the published `.pbw` is **proxy** — requests go to the Cloudflare Worker at `pebble-hvv-api.ave.zone`, which signs with the maintainer's HVV credentials and forwards to `gti.geofox.de`. **BYO mode** signs HMAC-SHA1 directly from the phone using user-entered credentials. **Demo mode** never makes an HTTP request. The watch C side and the JS response parser are mode-agnostic — the proxy returns GTI-shape JSON (just whitelisted to a subset of fields).
 
-Used response fields: `results[].name/type/distance/serviceTypes` (from `checkName`); `departures[].line.name/type.{shortInfo,longInfo}/direction`, `direction`, `timeOffset`, `delay` (from `departureList`).
+Used response fields: `results[].name/type/distance/serviceTypes` (from `checkName`); `departures[].line.name/type.{shortInfo,longInfo}/direction`, `direction`, `timeOffset`, `delay`, `cancelled` (from `departureList`, requested with `version: 63`).
 
 ## Conventions
 
