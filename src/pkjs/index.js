@@ -177,18 +177,29 @@ function encodeServices(serviceTypes) {
 var SEND_RETRIES = 2;
 var SEND_RETRY_DELAY_MS = 1000;
 
+// Latest send number per message kind, so a retry never overwrites a
+// newer message of the same kind (e.g. favorites-only over the nearby list)
+var latestSend = {};
+
 // The watch NACKs messages that collide with one it is sending, so retry
 // a couple of times rather than leaving it waiting for the next refresh.
-function sendToWatch(dict, label, attempt) {
-  attempt = attempt || 0;
-  Pebble.sendAppMessage(dict, function() {
-    console.log(label + ' sent to watch');
-  }, function(e) {
-    console.log('Failed to send ' + label + ': ' + JSON.stringify(e));
-    if (attempt < SEND_RETRIES) {
-      setTimeout(function() { sendToWatch(dict, label, attempt + 1); }, SEND_RETRY_DELAY_MS);
-    }
-  });
+function sendToWatch(dict, kind) {
+  var seq = latestSend[kind] = (latestSend[kind] || 0) + 1;
+  var attempt = 0;
+  function send() {
+    Pebble.sendAppMessage(dict, function() {
+      console.log(kind + ' sent to watch');
+    }, function(e) {
+      console.log('Failed to send ' + kind + ': ' + JSON.stringify(e));
+      if (attempt < SEND_RETRIES && latestSend[kind] === seq) {
+        attempt++;
+        setTimeout(function() {
+          if (latestSend[kind] === seq) send();
+        }, SEND_RETRY_DELAY_MS);
+      }
+    });
+  }
+  send();
 }
 
 // ---- Station List ----
@@ -214,7 +225,7 @@ function sendStationList(nearby, favorites) {
     dict[keys.STATION_SERVICES + k] = stations[k].services;
   }
 
-  sendToWatch(dict, 'Station list (' + stations.length + ')');
+  sendToWatch(dict, 'Station list');
 }
 
 // Demo nearby stations when no credentials
@@ -315,7 +326,8 @@ function sendError(msg, station) {
   var dict = {};
   dict[keys.ERROR_MSG] = msg;
   dict[keys.DEP_STATION] = station;
-  sendToWatch(dict, 'Error');
+  // Same kind as departures: whichever result is newest wins
+  sendToWatch(dict, 'Departures');
 }
 
 function fetchDepartures(station) {
