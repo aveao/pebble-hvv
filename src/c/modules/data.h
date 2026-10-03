@@ -2,7 +2,13 @@
 
 #include <pebble.h>
 
-#define MAX_DEPARTURES 30
+// Aplite/diorite have a 2 KB AppMessage inbox and little heap; the JS side
+// caps the configurable departure count to match.
+#if defined(PBL_PLATFORM_APLITE) || defined(PBL_PLATFORM_DIORITE)
+  #define MAX_DEPARTURES 15
+#else
+  #define MAX_DEPARTURES 30
+#endif
 #define LINE_NAME_LEN 8
 #define DIRECTION_LEN 32
 #define STATION_NAME_LEN 64

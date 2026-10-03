@@ -16,6 +16,27 @@ var TRANSIT_UNKNOWN = 4;
 var MAX_NEARBY = parseInt(localStorage.getItem('max_nearby'), 10) || 3;
 var MAX_DEPARTURES = parseInt(localStorage.getItem('max_departures'), 10) || 10;
 
+// Aplite/diorite use a 2 KB AppMessage inbox (see comm.c), which can't fit
+// 30 departures. Must match MAX_DEPARTURES in data.h.
+var MAX_DEPARTURES_LIMIT_COLOR = 30;
+var MAX_DEPARTURES_LIMIT_BW = 15;
+
+function maxDeparturesLimit() {
+  try {
+    var platform = Pebble.getActiveWatchInfo().platform;
+    if (platform && platform !== 'aplite' && platform !== 'diorite') {
+      return MAX_DEPARTURES_LIMIT_COLOR;
+    }
+  } catch (e) {
+    // Unknown platform: fall back to the limit that fits everywhere
+  }
+  return MAX_DEPARTURES_LIMIT_BW;
+}
+
+function getMaxDepartures() {
+  return Math.min(MAX_DEPARTURES, maxDeparturesLimit());
+}
+
 // Current station for departure fetches
 var currentStation = null;
 
@@ -256,7 +277,7 @@ function fetchStations() {
 
 function sendDepartures(departures) {
   var dict = {};
-  var count = Math.min(departures.length, MAX_DEPARTURES);
+  var count = Math.min(departures.length, getMaxDepartures());
   dict[keys.DEP_COUNT] = count;
 
   for (var i = 0; i < count; i++) {
@@ -298,7 +319,7 @@ function fetchDepartures() {
   api.request('departureList', {
     station: { name: currentStation, type: 'STATION' },
     time: { date: 'heute', time: 'jetzt' },
-    maxList: MAX_DEPARTURES,
+    maxList: getMaxDepartures(),
     maxTimeOffset: 999,
     useRealtime: true,
   }, function(resp, err) {
@@ -309,7 +330,7 @@ function fetchDepartures() {
     }
     if (resp.departures && resp.departures.length > 0) {
       var departures = [];
-      for (var i = 0; i < resp.departures.length && i < MAX_DEPARTURES; i++) {
+      for (var i = 0; i < resp.departures.length && i < getMaxDepartures(); i++) {
         var d = resp.departures[i];
         var lineName = d.line ? d.line.name.replace(/-SEV$/, '').replace(/-BUS$/, '') : '?';
         var lineType = mapLineType(d.line);
@@ -375,10 +396,21 @@ function substituteTokenPlaceholder(items, token) {
   }
 }
 
+function setMaxDeparturesLimit(items, limit) {
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (it && it.items) setMaxDeparturesLimit(it.items, limit);
+    if (it && it.messageKey === 'CONFIG_MAX_DEPARTURES' && it.attributes) {
+      it.attributes.max = limit;
+    }
+  }
+}
+
 Pebble.addEventListener('showConfiguration', function() {
   var token = api.getWatchToken() || '(unavailable on this watch)';
   var configCopy = JSON.parse(JSON.stringify(clayConfig));
   substituteTokenPlaceholder(configCopy, token);
+  setMaxDeparturesLimit(configCopy, maxDeparturesLimit());
   var dynamicClay = new Clay(configCopy, null, { autoHandleEvents: false });
   Pebble.openURL(dynamicClay.generateUrl());
 });
@@ -418,7 +450,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
     MAX_NEARBY = n;
   }
   if (maxDeps) {
-    var d = Math.max(10, Math.min(30, parseInt(maxDeps, 10) || 10));
+    var d = Math.max(10, Math.min(maxDeparturesLimit(), parseInt(maxDeps, 10) || 10));
     localStorage.setItem('max_departures', d);
     MAX_DEPARTURES = d;
   }
