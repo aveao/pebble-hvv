@@ -43,7 +43,8 @@ static GColor prv_ubahn_text_color(const char *line) {
   return GColorWhite;
 }
 
-#ifdef PBL_PLATFORM_EMERY
+// Emery and gabbro (round, 260x260) share sizes; round layouts inset rows
+#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   #define BADGE_FONT FONT_KEY_GOTHIC_18_BOLD
   #define BADGE_FONT_H 18
   #define BADGE_LABEL_Y_NUDGE 3

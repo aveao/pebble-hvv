@@ -5,7 +5,8 @@
 #include "../modules/text.h"
 #include "../modules/settings.h"
 
-#ifdef PBL_PLATFORM_EMERY
+// Emery and gabbro (round, 260x260) share sizes; round layouts inset rows
+#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   #define ROW_HEIGHT 36
   #define BADGE_HEIGHT 24
   #define BADGE_WIDTH 38
@@ -126,7 +127,7 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   int dir_w = width - dir_x - mins_w - 2;
 
   // Use large font if text fits, otherwise fall back to smaller font
-#ifdef PBL_PLATFORM_EMERY
+#ifdef FONT_DIR_BOLD
   bool bold = settings_get_bold_text();
   const char *dir_font_key = bold ? FONT_DIR_BOLD : FONT_DIR;
   const char *dir_small_font_key = bold ? FONT_DIR_SMALL_BOLD : FONT_DIR_SMALL;

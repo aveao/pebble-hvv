@@ -7,7 +7,8 @@
 #define SECTION_FAVORITES 0
 #define SECTION_NEARBY 1
 
-#ifdef PBL_PLATFORM_EMERY
+// Emery and gabbro (round, 260x260) share sizes; round layouts inset rows
+#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   #define STN_HEADER_HEIGHT 28
   #define STN_ROW_HEIGHT 40
   #define STN_FONT_NAME FONT_KEY_GOTHIC_28_BOLD
