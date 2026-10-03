@@ -1,4 +1,5 @@
 #include "data.h"
+#include "text.h"
 #include <pebble.h>
 
 #define PERSIST_KEY_STATION 1
@@ -39,11 +40,9 @@ void data_update_departure(int index, const char *line, TransitType type,
                            const char *direction, int16_t minutes, int16_t delay) {
   if (index < 0 || index >= MAX_DEPARTURES) return;
   Departure *dep = &s_departures[index];
-  strncpy(dep->line, line, LINE_NAME_LEN - 1);
-  dep->line[LINE_NAME_LEN - 1] = '\0';
+  text_copy_utf8(dep->line, line, sizeof(dep->line));
   dep->type = type;
-  strncpy(dep->direction, direction, DIRECTION_LEN - 1);
-  dep->direction[DIRECTION_LEN - 1] = '\0';
+  text_copy_utf8(dep->direction, direction, sizeof(dep->direction));
   dep->minutes = minutes;
   dep->delay = delay;
 }
@@ -53,7 +52,6 @@ const char *data_get_station_name(void) {
 }
 
 void data_set_station_name(const char *name) {
-  strncpy(s_station_name, name, STATION_NAME_LEN - 1);
-  s_station_name[STATION_NAME_LEN - 1] = '\0';
+  text_copy_utf8(s_station_name, name, sizeof(s_station_name));
   persist_write_string(PERSIST_KEY_STATION, s_station_name);
 }

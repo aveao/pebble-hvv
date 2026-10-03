@@ -2,6 +2,7 @@
 #include "../modules/data.h"
 #include "../modules/comm.h"
 #include "../modules/icons.h"
+#include "../modules/text.h"
 
 // Defined in main.c
 extern void app_start_departure_refresh(void);
@@ -263,7 +264,6 @@ void departure_window_refresh(void) {
 }
 
 void departure_window_show_error(const char *message) {
-  strncpy(s_error, message, sizeof(s_error) - 1);
-  s_error[sizeof(s_error) - 1] = '\0';
+  text_copy_utf8(s_error, message, sizeof(s_error));
   prv_update_content_size();
 }

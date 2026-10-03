@@ -3,7 +3,8 @@
 #include <pebble.h>
 
 #define MAX_STATIONS 15
-#define STATION_LABEL_LEN 32
+// Names are sent back to JS to fetch departures, so they must fit untruncated
+#define STATION_LABEL_LEN 64
 
 typedef enum {
   STATION_NEARBY = 0,

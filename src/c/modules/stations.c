@@ -1,4 +1,5 @@
 #include "stations.h"
+#include "text.h"
 
 // Persist keys (data.c owns key 1; keep favorites in a separate range).
 #define PERSIST_KEY_FAV_COUNT 100
@@ -50,8 +51,7 @@ Station *stations_get(int index) {
 void stations_update(int index, const char *name, StationType type, uint8_t distance, uint8_t services) {
   if (index < 0 || index >= MAX_STATIONS) return;
   Station *s = &s_stations[index];
-  strncpy(s->name, name, STATION_LABEL_LEN - 1);
-  s->name[STATION_LABEL_LEN - 1] = '\0';
+  text_copy_utf8(s->name, name, sizeof(s->name));
   s->type = type;
   s->distance = distance;
   s->services = services;
