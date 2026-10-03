@@ -5,6 +5,7 @@
 static CommDataCallback s_data_changed_callback;
 static CommStationsCallback s_stations_changed_callback;
 static CommErrorCallback s_error_callback;
+static CommRequestFailedCallback s_departures_failed_callback;
 
 static TransitType prv_parse_transit_type(int32_t type_val) {
   switch (type_val) {
@@ -115,6 +116,11 @@ static void prv_inbox_dropped_handler(AppMessageResult reason, void *context) {
 static void prv_outbox_failed_handler(DictionaryIterator *iter,
                                       AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox failed: %d", (int)reason);
+  // The phone rejected a departure request (e.g. it collided with a message
+  // from JS); let the caller retry instead of waiting for the next refresh
+  if (dict_find(iter, MESSAGE_KEY_REQUEST_DEPARTURES) && s_departures_failed_callback) {
+    s_departures_failed_callback();
+  }
 }
 
 static void prv_outbox_sent_handler(DictionaryIterator *iter, void *context) {
@@ -122,10 +128,11 @@ static void prv_outbox_sent_handler(DictionaryIterator *iter, void *context) {
 }
 
 void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb,
-               CommErrorCallback error_cb) {
+               CommErrorCallback error_cb, CommRequestFailedCallback departures_failed_cb) {
   s_data_changed_callback = data_changed_cb;
   s_stations_changed_callback = stations_changed_cb;
   s_error_callback = error_cb;
+  s_departures_failed_callback = departures_failed_cb;
 
   app_message_register_inbox_received(prv_inbox_received_handler);
   app_message_register_inbox_dropped(prv_inbox_dropped_handler);

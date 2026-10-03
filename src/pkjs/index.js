@@ -172,6 +172,25 @@ function encodeServices(serviceTypes) {
   return mask;
 }
 
+// ---- Messaging ----
+
+var SEND_RETRIES = 2;
+var SEND_RETRY_DELAY_MS = 1000;
+
+// The watch NACKs messages that collide with one it is sending, so retry
+// a couple of times rather than leaving it waiting for the next refresh.
+function sendToWatch(dict, label, attempt) {
+  attempt = attempt || 0;
+  Pebble.sendAppMessage(dict, function() {
+    console.log(label + ' sent to watch');
+  }, function(e) {
+    console.log('Failed to send ' + label + ': ' + JSON.stringify(e));
+    if (attempt < SEND_RETRIES) {
+      setTimeout(function() { sendToWatch(dict, label, attempt + 1); }, SEND_RETRY_DELAY_MS);
+    }
+  });
+}
+
 // ---- Station List ----
 
 function sendStationList(nearby, favorites) {
@@ -195,11 +214,7 @@ function sendStationList(nearby, favorites) {
     dict[keys.STATION_SERVICES + k] = stations[k].services;
   }
 
-  Pebble.sendAppMessage(dict, function() {
-    console.log('Station list sent (' + stations.length + ' stations)');
-  }, function(e) {
-    console.log('Failed to send station list: ' + JSON.stringify(e));
-  });
+  sendToWatch(dict, 'Station list (' + stations.length + ')');
 }
 
 // Demo nearby stations when no credentials
@@ -293,18 +308,14 @@ function sendDepartures(departures, station) {
     dict[keys.DEP_DELAY + i] = dep.delay;
   }
 
-  Pebble.sendAppMessage(dict, function() {
-    console.log('Departures sent to watch');
-  }, function(e) {
-    console.log('Failed to send departures: ' + JSON.stringify(e));
-  });
+  sendToWatch(dict, 'Departures');
 }
 
 function sendError(msg, station) {
   var dict = {};
   dict[keys.ERROR_MSG] = msg;
   dict[keys.DEP_STATION] = station;
-  Pebble.sendAppMessage(dict);
+  sendToWatch(dict, 'Error');
 }
 
 function fetchDepartures(station) {

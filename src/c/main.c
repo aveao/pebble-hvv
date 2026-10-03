@@ -35,6 +35,13 @@ static void prv_refresh_timer_callback(void *context) {
   prv_request_departures();
 }
 
+static void prv_departure_request_failed(void) {
+  // Only retry while the refresh cycle is running (departure window open)
+  if (s_refresh_timer) {
+    app_timer_reschedule(s_refresh_timer, RETRY_INTERVAL_MS);
+  }
+}
+
 void app_start_departure_refresh(void) {
   // Request departures now, then every 30s
   if (s_refresh_timer) {
@@ -53,7 +60,7 @@ void app_stop_departure_refresh(void) {
 static void prv_init(void) {
   data_init();
   stations_init();
-  comm_init(prv_data_changed, prv_stations_changed, prv_error);
+  comm_init(prv_data_changed, prv_stations_changed, prv_error, prv_departure_request_failed);
   station_window_push();
 }
 
