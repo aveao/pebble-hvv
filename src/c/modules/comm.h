@@ -9,7 +9,7 @@ typedef void (*CommRequestFailedCallback)(AppMessageResult reason);
 typedef void (*CommSettingsCallback)(void);
 
 void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb,
-               CommErrorCallback error_cb, CommRequestFailedCallback departures_failed_cb,
+               CommErrorCallback stations_error_cb, CommErrorCallback error_cb, CommRequestFailedCallback departures_failed_cb,
                CommSettingsCallback settings_changed_cb);
 void comm_deinit(void);
 // APP_MSG_OK if the request was queued, otherwise why it wasn't

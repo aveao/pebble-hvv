@@ -3,6 +3,7 @@
 #include "../modules/stations.h"
 #include "../modules/comm.h"
 #include "../modules/data.h"
+#include "../modules/text.h"
 
 #define SECTION_FAVORITES 0
 #define SECTION_NEARBY 1
@@ -52,6 +53,9 @@ static MenuLayer *s_menu_layer;
 static TextLayer *s_loading_layer;
 static bool s_received_data;
 static bool s_appeared_before;
+// Last stop lookup error, and the loading text built from it
+static char s_error[32];
+static char s_error_text[48];
 
 static uint16_t prv_get_num_sections(MenuLayer *menu_layer, void *context) {
   return 2;
@@ -270,9 +274,21 @@ static void prv_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell
 #endif
 }
 
+// Ask JS for the list again once a lookup has come back empty or failed
+static void prv_retry_stations(void) {
+  if (!s_received_data || stations_get_count() > 0) return;
+  s_received_data = false;
+  s_error[0] = '\0';
+  text_layer_set_text(s_loading_layer, "Loading stops...");
+  comm_request_stations();
+}
+
 static void prv_select_click(MenuLayer *menu_layer, MenuIndex *cell_index, void *context) {
   Station *station = prv_station_at(cell_index);
-  if (!station) return;
+  if (!station) {
+    prv_retry_stations();
+    return;
+  }
 
   // Departure window requests departures for this station when it appears
   data_set_station_name(station->name);
@@ -295,6 +311,8 @@ static void prv_round_sync_selection(void) {
   if (prv_is_valid_row(s_round_sel)) {
     prv_round_select(s_round_sel);
   } else {
+    // Empty list: start from the top again once stations arrive
+    s_round_sel = MenuIndex(SECTION_FAVORITES, 0);
     menu_layer_reload_data(s_menu_layer);
   }
 }
@@ -337,7 +355,11 @@ static void prv_round_down_click(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void prv_round_select_click(ClickRecognizerRef recognizer, void *context) {
-  if (prv_is_valid_row(s_round_sel)) prv_select_click(s_menu_layer, &s_round_sel, NULL);
+  if (prv_is_valid_row(s_round_sel)) {
+    prv_select_click(s_menu_layer, &s_round_sel, NULL);
+  } else {
+    prv_retry_stations();
+  }
 }
 
 static void prv_round_click_config(void *context) {
@@ -351,10 +373,14 @@ static void prv_update_loading_visibility(void) {
   bool has_data = stations_get_count() > 0;
   layer_set_hidden(text_layer_get_layer(s_loading_layer), has_data);
   layer_set_hidden(menu_layer_get_layer(s_menu_layer), !has_data);
-  if (!has_data && s_received_data) {
+  if (!has_data && s_error[0]) {
+    snprintf(s_error_text, sizeof(s_error_text), "%s\nSelect to retry", s_error);
+    text_layer_set_text(s_loading_layer, s_error_text);
+  } else if (!has_data && s_received_data) {
     text_layer_set_text(s_loading_layer, "No stops found.\nSet favorites in\napp settings.");
   }
 }
+
 
 static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
@@ -428,12 +454,21 @@ void station_window_push(void) {
 
 void station_window_refresh(void) {
   s_received_data = true;
+  s_error[0] = '\0';
   if (s_menu_layer) {
 #ifdef PBL_ROUND
     prv_round_sync_selection();
 #else
     menu_layer_reload_data(s_menu_layer);
 #endif
+    prv_update_loading_visibility();
+  }
+}
+
+void station_window_show_error(const char *message) {
+  s_received_data = true;
+  text_copy_utf8(s_error, message, sizeof(s_error));
+  if (s_menu_layer) {
     prv_update_loading_visibility();
   }
 }

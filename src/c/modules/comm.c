@@ -5,6 +5,7 @@
 
 static CommDataCallback s_data_changed_callback;
 static CommStationsCallback s_stations_changed_callback;
+static CommErrorCallback s_stations_error_callback;
 static CommErrorCallback s_error_callback;
 static CommRequestFailedCallback s_departures_failed_callback;
 static CommSettingsCallback s_settings_changed_callback;
@@ -125,6 +126,16 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
     return;
   }
 
+  // The stop lookup failed (JS only sends this when there are no favorites)
+  Tuple *stations_error_tuple = dict_find(iter, MESSAGE_KEY_STATIONS_ERROR);
+  if (stations_error_tuple) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Stations error: %s", stations_error_tuple->value->cstring);
+    if (s_stations_error_callback) {
+      s_stations_error_callback(stations_error_tuple->value->cstring);
+    }
+    return;
+  }
+
   // Check for error message
   Tuple *error_tuple = dict_find(iter, MESSAGE_KEY_ERROR_MSG);
   if (error_tuple) {
@@ -169,10 +180,11 @@ static void prv_outbox_sent_handler(DictionaryIterator *iter, void *context) {
 }
 
 void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_changed_cb,
-               CommErrorCallback error_cb, CommRequestFailedCallback departures_failed_cb,
+               CommErrorCallback stations_error_cb, CommErrorCallback error_cb, CommRequestFailedCallback departures_failed_cb,
                CommSettingsCallback settings_changed_cb) {
   s_data_changed_callback = data_changed_cb;
   s_stations_changed_callback = stations_changed_cb;
+  s_stations_error_callback = stations_error_cb;
   s_error_callback = error_cb;
   s_departures_failed_callback = departures_failed_cb;
   s_settings_changed_callback = settings_changed_cb;

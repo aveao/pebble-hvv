@@ -57,7 +57,8 @@
       "CONFIG_MAX_DEPARTURES",
       "CONFIG_BOLD_TEXT",
       "CONFIG_TOUCH_NAV",
-      "CONFIG_DIRECTION_ARROWS"
+      "CONFIG_DIRECTION_ARROWS",
+      "STATIONS_ERROR"
     ],
     "projectRepositoryUrl": "https://github.com/aveao/pebble-hvv",
     "screenshots": [

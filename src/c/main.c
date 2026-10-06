@@ -11,7 +11,7 @@ static void prv_init(void) {
   data_init();
   stations_init();
   comm_init(departure_window_refresh, station_window_refresh,
-            departure_window_show_error, departure_window_request_failed,
+            station_window_show_error, departure_window_show_error, departure_window_request_failed,
             departure_window_redraw);
   station_window_push();
 }

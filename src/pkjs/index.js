@@ -240,6 +240,14 @@ function sendStationList(nearby, favorites) {
   sendToWatch(dict, 'Station list');
 }
 
+// Tell the watch the stop lookup failed, so it can offer a retry instead of
+// showing an empty list. Same kind as the list: whichever is newest wins.
+function sendStationsError(msg) {
+  var dict = {};
+  dict[keys.STATIONS_ERROR] = msg;
+  sendToWatch(dict, 'Station list');
+}
+
 // Demo nearby stations when no credentials
 var DEMO_NEARBY = [
   { name: 'Jungdemostieg', dist: 12, services: SERVICE_SBAHN | SERVICE_UBAHN | SERVICE_BUS },
@@ -265,8 +273,10 @@ function fetchStations() {
 
   // Fetch nearby stations asynchronously
   getLocation(function(lat, lon) {
+    // Favorites (if any) were already sent above; otherwise report the
+    // failure so the watch leaves its loading state
     if (!lat || !lon) {
-      if (favorites.length === 0) sendStationList([], favorites);
+      if (favorites.length === 0) sendStationsError('Location unavailable');
       return;
     }
     var checkNameBody = {
@@ -283,11 +293,9 @@ function fetchStations() {
       allowTypeSwitch: true,
     };
     api.request('checkName', checkNameBody, function(resp, err) {
-      // Favorites (if any) were already sent above; otherwise send an empty
-      // list so the watch leaves its loading state.
       if (err) {
         console.log('checkName error: ' + err);
-        if (favorites.length === 0) sendStationList([], favorites);
+        if (favorites.length === 0) sendStationsError(err);
         return;
       }
       var results = resp.results || resp.sdNameList || [];

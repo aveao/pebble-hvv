@@ -7,6 +7,9 @@ var TOKEN_RE = /^[a-f0-9]{32}$/;
 
 var DEMO_MODE = 'DEMO_MODE';
 
+// Without a timeout a stalled request would leave the watch loading forever
+var REQUEST_TIMEOUT_MS = 15000;
+
 var cachedToken = null;
 var cachedTokenResolved = false;
 
@@ -46,9 +49,18 @@ function getMode() {
 
 // POSTs bodyStr and maps the response to callback(json, null) or
 // callback(null, errorMessage). Shared by the GTI and proxy adapters.
-function postJson(label, url, headers, bodyStr, callback) {
+function postJson(label, url, headers, bodyStr, cb) {
+  // onerror and ontimeout can both fire for one request
+  var done = false;
+  function callback(json, err) {
+    if (done) return;
+    done = true;
+    cb(json, err);
+  }
+
   var req = new XMLHttpRequest();
   req.open('POST', url, true);
+  req.timeout = REQUEST_TIMEOUT_MS;
   for (var name in headers) {
     req.setRequestHeader(name, headers[name]);
   }
@@ -74,6 +86,7 @@ function postJson(label, url, headers, bodyStr, callback) {
     }
   };
   req.onerror = function() { callback(null, 'Connection error'); };
+  req.ontimeout = function() { callback(null, 'Timeout'); };
   req.send(bodyStr);
 }
 
