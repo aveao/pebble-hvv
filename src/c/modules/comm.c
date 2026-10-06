@@ -181,8 +181,9 @@ void comm_init(CommDataCallback data_changed_cb, CommStationsCallback stations_c
   // app_message_*_size_maximum() returns ~8 KB each on every platform, but
   // aplite and diorite only have ~15 KB of app heap total, so requesting
   // both maximums fails with APP_MSG_INVALID_STATE. Pick sizes that fit
-  // our actual messages: stations list is ~1 KB, departure list with the
-  // default 10 entries is ~900 B, requests outbound are tiny.
+  // our actual messages: stations list is ~1 KB, and a departure list is
+  // up to ~110 B per entry (JS caps directions at 31 bytes), so ~1.7 KB at
+  // aplite's 15-entry maximum. Requests outbound are tiny.
 #if defined(PBL_PLATFORM_APLITE) || defined(PBL_PLATFORM_DIORITE)
   app_message_open(2048, 128);
 #else
