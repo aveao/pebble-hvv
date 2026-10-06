@@ -409,7 +409,10 @@ function fetchDepartures(station) {
         var d = resp.departures[i];
         var lineName = (d.line && d.line.name) ? d.line.name.replace(/-SEV$/, '').replace(/-BUS$/, '') : '?';
         var lineType = mapLineType(d.line);
-        var dir = (d.line && d.line.direction) || d.direction || '';
+        // departure.direction is documented as the numeric direction id;
+        // only take it as the destination when it's text
+        var dir = (d.line && d.line.direction) ||
+          (typeof d.direction === 'string' ? d.direction : '');
         departures.push({
           line: lineName,
           type: lineType,
