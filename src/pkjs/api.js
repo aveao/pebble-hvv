@@ -56,8 +56,13 @@ function postJson(label, url, headers, bodyStr, callback) {
   req.onload = function() {
     console.log(label + ' response status=' + req.status);
     if (req.status === 200) {
-      try { callback(JSON.parse(req.responseText), null); }
-      catch (e) { callback(null, 'Parse error: ' + e.message); }
+      // Call back outside the try, so an exception in the caller isn't
+      // reported as a second, parse-error callback
+      var json;
+      try { json = JSON.parse(req.responseText); }
+      catch (e) { return callback(null, 'Parse error: ' + e.message); }
+      if (!json || typeof json !== 'object') return callback(null, 'Parse error');
+      callback(json, null);
     } else if (req.status === 429) {
       callback(null, 'Rate limited');
     } else if (req.status === 502) {
