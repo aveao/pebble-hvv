@@ -12,6 +12,10 @@ var TRANSIT_UBAHN = 2;
 var TRANSIT_FERRY = 3;
 var TRANSIT_UNKNOWN = 4;
 
+// GTI directionId values, matching the C DirectionId enum
+var DIRECTION_FORWARD = 1;
+var DIRECTION_BACKWARD = 6;
+
 // Configurable limits (loaded from localStorage, defaults below)
 var MAX_NEARBY = parseInt(localStorage.getItem('max_nearby'), 10) || 3;
 var MAX_DEPARTURES = parseInt(localStorage.getItem('max_departures'), 10) || 10;
@@ -44,16 +48,16 @@ function getMaxDepartures() {
 
 // Demo departure data
 var DEMO_DEPARTURES = [
-  { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Ohlstedt',         minutes: 2,  delay: 0 },
-  { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Norderstedt Mitte', minutes: 4,  delay: 1 },
-  { line: 'S3',  type: TRANSIT_SBAHN, direction: 'Pinneberg',         minutes: 5,  delay: 0 },
-  { line: 'U3',  type: TRANSIT_UBAHN, direction: 'Barmbek',           minutes: 8,  delay: 0 },
-  { line: '112', type: TRANSIT_BUS,   direction: 'Mundsburg',         minutes: 7,  delay: 3 },
-  { line: '62',  type: TRANSIT_FERRY, direction: 'Finkenwerder',      minutes: 10, delay: 0 },
-  { line: 'S1',  type: TRANSIT_SBAHN, direction: 'Airport',           minutes: 12, delay: 2 },
-  { line: '5',   type: TRANSIT_BUS,   direction: 'Burgwedel',         minutes: 14, delay: 0 },
-  { line: 'U2',  type: TRANSIT_UBAHN, direction: 'Niendorf Markt',    minutes: 15, delay: 0 },
-  { line: '73',  type: TRANSIT_FERRY, direction: 'Arningstr.',        minutes: 18, delay: 1 },
+  { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Ohlstedt',         minutes: 2,  delay: 0, directionId: DIRECTION_FORWARD },
+  { line: 'U1',  type: TRANSIT_UBAHN, direction: 'Norderstedt Mitte', minutes: 4,  delay: 1, directionId: DIRECTION_BACKWARD },
+  { line: 'S3',  type: TRANSIT_SBAHN, direction: 'Pinneberg',         minutes: 5,  delay: 0, directionId: DIRECTION_BACKWARD },
+  { line: 'U3',  type: TRANSIT_UBAHN, direction: 'Barmbek',           minutes: 8,  delay: 0, directionId: DIRECTION_BACKWARD },
+  { line: '112', type: TRANSIT_BUS,   direction: 'Mundsburg',         minutes: 7,  delay: 3, directionId: DIRECTION_FORWARD },
+  { line: '62',  type: TRANSIT_FERRY, direction: 'Finkenwerder',      minutes: 10, delay: 0, directionId: DIRECTION_BACKWARD },
+  { line: 'S1',  type: TRANSIT_SBAHN, direction: 'Airport',           minutes: 12, delay: 2, directionId: DIRECTION_FORWARD },
+  { line: '5',   type: TRANSIT_BUS,   direction: 'Burgwedel',         minutes: 14, delay: 0, directionId: DIRECTION_BACKWARD },
+  { line: 'U2',  type: TRANSIT_UBAHN, direction: 'Niendorf Markt',    minutes: 15, delay: 0, directionId: DIRECTION_BACKWARD },
+  { line: '73',  type: TRANSIT_FERRY, direction: 'Arningstr.',        minutes: 18, delay: 1, directionId: DIRECTION_FORWARD },
 ];
 
 // ---- Helpers ----
@@ -321,6 +325,12 @@ function sortByExpectedTime(departures) {
     .map(function(entry) { return entry.dep; });
 }
 
+// GTI's directionId (1 = forward, 6 = backward along the line). The handbook
+// documents it as departure.direction, but responses carry it as directionId.
+function parseDirectionId(id) {
+  return (id === DIRECTION_FORWARD || id === DIRECTION_BACKWARD) ? id : 0;
+}
+
 function sendDepartures(departures, station) {
   var dict = {};
   var count = Math.min(departures.length, getMaxDepartures());
@@ -336,6 +346,7 @@ function sendDepartures(departures, station) {
     dict[keys.DEP_DELAY + i] = dep.delay;
     // Only sent when set, to keep messages small; the watch defaults to false
     if (dep.cancelled) dict[keys.DEP_CANCELLED + i] = 1;
+    if (dep.directionId) dict[keys.DEP_DIR_ID + i] = dep.directionId;
   }
 
   sendToWatch(dict, 'Departures');
@@ -388,6 +399,7 @@ function fetchDepartures(station) {
           // GTI reports delay in seconds; the watch works in minutes
           delay: Math.round((d.delay || 0) / 60),
           cancelled: !!d.cancelled,
+          directionId: parseDirectionId(d.directionId),
         });
       }
       sendDepartures(sortByExpectedTime(departures), station);

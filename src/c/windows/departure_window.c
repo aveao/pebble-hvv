@@ -129,6 +129,7 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   // Draw badge
   GRect badge_rect = GRect(BADGE_MARGIN + inset, cy - BADGE_HEIGHT / 2, BADGE_WIDTH, BADGE_HEIGHT);
   icons_draw_badge(ctx, dep->type, dep->line, badge_rect);
+  icons_draw_direction_arrow(ctx, dep->direction_id, badge_rect);
 
   // Restore text color after badge
   graphics_context_set_text_color(ctx, GColorBlack);

@@ -38,6 +38,7 @@
       "DEP_MINS[30]",
       "DEP_DELAY[30]",
       "DEP_CANCELLED[30]",
+      "DEP_DIR_ID[30]",
       "CONFIG_USER",
       "CONFIG_PASSWORD",
       "ERROR_MSG",

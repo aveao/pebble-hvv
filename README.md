@@ -13,7 +13,7 @@ A Pebble smartwatch app that displays real-time HVV (Hamburger Verkehrsverbund) 
 <p align="center">
   <img src=".assets/emery_screenshot_mainpage.png" alt="Station list (Pebble Time 2)" width="228">
   &nbsp;&nbsp;
-  <img src=".assets/emery_screenshot_jungfernstieg.png" alt="Hamburg Hbf departures (Pebble Time 2)" width="228">
+  <img src=".assets/emery_screenshot_jungfernstieg.png" alt="Jungfernstieg departures (Pebble Time 2)" width="228">
 </p>
 
 <p align="center">

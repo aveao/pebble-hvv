@@ -51,11 +51,19 @@ static GColor prv_ubahn_text_color(const char *line) {
   // Labels starting with a letter (S3, U3, X3) render ~1px left of center
   // at this size; number-only labels (5, 112) are already centered
   #define BADGE_LETTER_X_NUDGE 1
+  #define ARROW_W 9
+  #define ARROW_H 5
+  // Arrow sits directly on the badge; there is less room above it here
+  #define ARROW_GAP 0
 #else
   #define BADGE_FONT FONT_KEY_GOTHIC_14_BOLD
   #define BADGE_FONT_H 14
   #define BADGE_LABEL_Y_NUDGE 2
   #define BADGE_LETTER_X_NUDGE 0
+  #define ARROW_W 7
+  #define ARROW_H 5
+  // Gap between the arrow and the top of the badge
+  #define ARROW_GAP 1
 #endif
 
 static void prv_draw_label(GContext *ctx, const char *line, GRect rect, GColor text_color) {
@@ -155,5 +163,25 @@ void icons_draw_badge(GContext *ctx, TransitType type, const char *line, GRect r
     case TRANSIT_UBAHN:  prv_draw_ubahn(ctx, line, rect);   break;
     case TRANSIT_FERRY:  prv_draw_ferry(ctx, line, rect);   break;
     default:             prv_draw_unknown(ctx, line, rect);  break;
+  }
+}
+
+void icons_draw_direction_arrow(GContext *ctx, DirectionId direction_id, GRect badge_rect) {
+  if (direction_id != DIRECTION_ID_FORWARD && direction_id != DIRECTION_ID_BACKWARD) return;
+  bool right = direction_id == DIRECTION_ID_FORWARD;
+
+  int x = right ? badge_rect.origin.x + badge_rect.size.w - ARROW_W : badge_rect.origin.x;
+  int y = badge_rect.origin.y - ARROW_GAP - ARROW_H;
+  int mid = ARROW_H / 2;
+  int head_w = mid + 1;
+
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  // Shaft, then the head column by column (a filled GPath this small rounds
+  // unevenly), widening from a 1px tip
+  int shaft_x = right ? x : x + head_w;
+  graphics_fill_rect(ctx, GRect(shaft_x, y + mid, ARROW_W - head_w, 1), 0, GCornerNone);
+  for (int c = 0; c < head_w; c++) {
+    int col_x = right ? x + ARROW_W - 1 - c : x + c;
+    graphics_fill_rect(ctx, GRect(col_x, y + mid - c, 1, 2 * c + 1), 0, GCornerNone);
   }
 }

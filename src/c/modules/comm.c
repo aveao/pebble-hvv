@@ -19,6 +19,15 @@ static TransitType prv_parse_transit_type(int32_t type_val) {
   }
 }
 
+static DirectionId prv_parse_direction_id(Tuple *tuple) {
+  if (!tuple) return DIRECTION_ID_UNKNOWN;
+  switch (tuple->value->int32) {
+    case DIRECTION_ID_FORWARD:  return DIRECTION_ID_FORWARD;
+    case DIRECTION_ID_BACKWARD: return DIRECTION_ID_BACKWARD;
+    default:                    return DIRECTION_ID_UNKNOWN;
+  }
+}
+
 static void prv_parse_stations(DictionaryIterator *iter) {
   Tuple *count_tuple = dict_find(iter, MESSAGE_KEY_STATION_COUNT);
   if (!count_tuple) return;
@@ -67,6 +76,7 @@ static void prv_parse_departures(DictionaryIterator *iter) {
     Tuple *mins_t  = dict_find(iter, MESSAGE_KEY_DEP_MINS + i);
     Tuple *delay_t = dict_find(iter, MESSAGE_KEY_DEP_DELAY + i);
     Tuple *cancelled_t = dict_find(iter, MESSAGE_KEY_DEP_CANCELLED + i);
+    Tuple *dir_id_t = dict_find(iter, MESSAGE_KEY_DEP_DIR_ID + i);
 
     if (line_t && type_t && dir_t && mins_t) {
       data_update_departure(stored++,
@@ -75,7 +85,8 @@ static void prv_parse_departures(DictionaryIterator *iter) {
         dir_t->value->cstring,
         (int16_t)mins_t->value->int32,
         delay_t ? (int16_t)delay_t->value->int32 : 0,
-        cancelled_t && cancelled_t->value->int32);
+        cancelled_t && cancelled_t->value->int32,
+        prv_parse_direction_id(dir_id_t));
     }
   }
   data_set_count(stored);
