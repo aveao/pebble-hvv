@@ -544,6 +544,13 @@ Pebble.addEventListener('ready', function() {
   }
 });
 
+// Some phone apps key incoming payloads by numeric key, others by name.
+// Checked with !== undefined, so a 0 value (e.g. row 0) isn't skipped.
+function payloadValue(payload, name) {
+  var value = payload[keys[name]];
+  return value !== undefined ? value : payload[name];
+}
+
 Pebble.addEventListener('appmessage', function(e) {
   console.log('appmessage keys: ' + JSON.stringify(Object.keys(e.payload)));
   console.log('appmessage payload: ' + JSON.stringify(e.payload));
@@ -561,11 +568,11 @@ Pebble.addEventListener('appmessage', function(e) {
     console.log('-> REQUEST_DEPARTURES: ' + reqDeps);
     fetchDepartures(reqDeps);
   }
-  var reqCourse = e.payload[keys.REQUEST_COURSE];
+  var reqCourse = payloadValue(e.payload, 'REQUEST_COURSE');
   if (typeof reqCourse === 'string' && reqCourse) {
     console.log('-> REQUEST_COURSE: ' + reqCourse);
-    fetchCourse(reqCourse, e.payload[keys.COURSE_DEP_INDEX],
-      e.payload[keys.COURSE_DEP_LINE], e.payload[keys.COURSE_REQ_ID]);
+    fetchCourse(reqCourse, payloadValue(e.payload, 'COURSE_DEP_INDEX'),
+      payloadValue(e.payload, 'COURSE_DEP_LINE'), payloadValue(e.payload, 'COURSE_REQ_ID'));
   }
 });
 

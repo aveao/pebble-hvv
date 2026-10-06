@@ -13,6 +13,10 @@
 #define HEADER_H 30
 #define BADGE_W 38
 #define BADGE_H 24
+// Vertical positions in the header, tuned so badge and text sit centred on
+// the bar (Gothic 18's glyphs start a few px below the text box top)
+#define HEADER_BADGE_Y 3
+#define HEADER_TEXT_Y 3
 // Line diagram: centre of the line from the row's left edge (or round inset)
 #define DIAG_X 14
 #define LINE_W 4
@@ -28,6 +32,8 @@
 
 #define REFRESH_INTERVAL_MS 60000
 #define RETRY_INTERVAL_MS 2000
+// Say so if nothing has come back this long after opening
+#define NO_REPLY_MS 20000
 // Close after 15 minutes without input to stop unnecessary API requests
 #define INACTIVITY_TIMEOUT_MS (15 * 60 * 1000)
 
@@ -38,6 +44,7 @@ static MenuLayer *s_menu_layer;
 static TextLayer *s_loading_layer;
 static AppTimer *s_refresh_timer;
 static AppTimer *s_inactivity_timer;
+static AppTimer *s_no_reply_timer;
 static bool s_visible;
 // True once the first route of this window has arrived
 static bool s_has_route;
@@ -244,11 +251,11 @@ static void prv_header_update_proc(Layer *layer, GContext *ctx) {
     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft).w;
   left += (avail - (BADGE_W + PAD + 2 + text_w)) / 2;
 #endif
-  GRect badge = GRect(left, (HEADER_H - BADGE_H) / 2, BADGE_W, BADGE_H);
+  GRect badge = GRect(left, HEADER_BADGE_Y, BADGE_W, BADGE_H);
   icons_draw_badge(ctx, s_type, s_line, badge);
 
   graphics_context_set_text_color(ctx, GColorWhite);
-  graphics_draw_text(ctx, text, font, GRect(left + BADGE_W + PAD + 2, 1, text_max, HEADER_H),
+  graphics_draw_text(ctx, text, font, GRect(left + BADGE_W + PAD + 2, HEADER_TEXT_Y, text_max, HEADER_H),
     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
@@ -281,7 +288,21 @@ static void prv_refresh_timer_callback(void *context) {
   prv_request_course();
 }
 
+static void prv_update_loading(void);
+
+static void prv_no_reply_timeout(void *context) {
+  s_no_reply_timer = NULL;
+  if (course_get_count() > 0 || s_error[0]) return;
+  text_copy_utf8(s_error, "No response from phone", sizeof(s_error));
+  layer_mark_dirty(s_header_layer);
+  prv_update_loading();
+}
+
 static void prv_stop_timers(void) {
+  if (s_no_reply_timer) {
+    app_timer_cancel(s_no_reply_timer);
+    s_no_reply_timer = NULL;
+  }
   if (s_refresh_timer) {
     app_timer_cancel(s_refresh_timer);
     s_refresh_timer = NULL;
@@ -373,6 +394,9 @@ static void prv_window_appear(Window *window) {
   tick_timer_service_subscribe(MINUTE_UNIT, prv_minute_tick);
   prv_request_course();
   prv_reset_inactivity_timer();
+  if (course_get_count() == 0) {
+    s_no_reply_timer = app_timer_register(NO_REPLY_MS, prv_no_reply_timeout, NULL);
+  }
 }
 
 static void prv_window_disappear(Window *window) {
