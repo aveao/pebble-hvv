@@ -332,6 +332,11 @@ function fetchStations() {
 
 // DEP_STATION echoes the requested station so the watch can drop responses
 // that arrive after the user has moved on to another station.
+
+// GTI's first N by scheduled time can miss departures that leave before a
+// delayed one in that set, so fetch a few extra, sort, then cut to N.
+var DEPARTURE_FETCH_EXTRA = 5;
+
 // GTI lists departures by scheduled time, so a delayed service that was due a
 // few minutes ago stays on top. Order by when they'll actually leave instead
 // (scheduled + delay), keeping GTI's order for departures in the same minute
@@ -404,7 +409,7 @@ function fetchDepartures(station) {
     version: 63,
     station: { name: station, type: 'STATION' },
     time: { date: 'heute', time: 'jetzt' },
-    maxList: getMaxDepartures(),
+    maxList: getMaxDepartures() + DEPARTURE_FETCH_EXTRA,
     maxTimeOffset: 999,
     useRealtime: true,
   }, function(resp, err) {
@@ -415,7 +420,7 @@ function fetchDepartures(station) {
     }
     if (resp.departures && resp.departures.length > 0) {
       var departures = [];
-      for (var i = 0; i < resp.departures.length && i < getMaxDepartures(); i++) {
+      for (var i = 0; i < resp.departures.length; i++) {
         var d = resp.departures[i];
         var lineName = (d.line && d.line.name) ? d.line.name.replace(/-SEV$/, '').replace(/-BUS$/, '') : '?';
         var lineType = mapLineType(d.line);
