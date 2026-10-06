@@ -198,8 +198,11 @@ static void prv_content_update_proc(Layer *layer, GContext *ctx) {
   int count = data_get_count();
   for (int i = 0; i < count; i++) {
     int16_t y = HEADER_HEIGHT + i * ROW_HEIGHT;
-    // Inset for the band where badge and minutes are drawn, not the whole row
-    int16_t inset = prv_inset_for(y + (ROW_HEIGHT - BADGE_HEIGHT) / 2, BADGE_HEIGHT);
+    // Inset for the band where badge, arrow and minutes are drawn, not the
+    // whole row
+    int16_t arrow_h = icons_direction_arrow_height();
+    int16_t inset = prv_inset_for(y + (ROW_HEIGHT - BADGE_HEIGHT) / 2 - arrow_h,
+                                  BADGE_HEIGHT + arrow_h);
     prv_draw_departure_row(ctx, i, y, bounds.size.w, inset);
   }
 }

@@ -166,6 +166,10 @@ void icons_draw_badge(GContext *ctx, TransitType type, const char *line, GRect r
   }
 }
 
+int16_t icons_direction_arrow_height(void) {
+  return ARROW_GAP + ARROW_H;
+}
+
 void icons_draw_direction_arrow(GContext *ctx, DirectionId direction_id, GRect badge_rect) {
   if (direction_id != DIRECTION_ID_FORWARD && direction_id != DIRECTION_ID_BACKWARD) return;
   bool right = direction_id == DIRECTION_ID_FORWARD;
