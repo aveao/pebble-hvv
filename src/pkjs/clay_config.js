@@ -111,6 +111,12 @@ module.exports = [
       },
       {
         "type": "toggle",
+        "messageKey": "CONFIG_DIRECTION_ARROWS",
+        "label": "Show direction arrows",
+        "defaultValue": true
+      },
+      {
+        "type": "toggle",
         "messageKey": "CONFIG_TOUCH_NAV",
         "label": "Touch navigation (touchscreen watches)",
         "defaultValue": true

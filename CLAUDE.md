@@ -107,7 +107,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 - `src/c/modules/comm.c/.h` — AppMessage handling (receive departures, send requests to JS)
 - `src/c/modules/icons.c/.h` — Programmatic transit type icon drawing (no bitmap resources)
 - `src/c/modules/round.c/.h` — `round_inset()` for fitting rows to round screens
-- `src/c/modules/settings.c/.h` — Watch-side settings persisted in Storage: bold departure text (emery, gabbro) and touch navigation (default on), sent from Clay as `CONFIG_BOLD_TEXT` / `CONFIG_TOUCH_NAV`
+- `src/c/modules/settings.c/.h` — Watch-side settings persisted in Storage: bold departure text (emery, gabbro), direction arrows (default on) and touch navigation (default on), sent from Clay as `CONFIG_BOLD_TEXT` / `CONFIG_DIRECTION_ARROWS` / `CONFIG_TOUCH_NAV`
 
 ### JS side (phone)
 - `src/pkjs/index.js` — Clay config init, AppMessage bridge, demo data, response parsing

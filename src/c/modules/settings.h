@@ -9,6 +9,10 @@ void settings_init(void);
 bool settings_get_bold_text(void);
 void settings_set_bold_text(bool bold);
 
+// Direction arrows above departure badges; on by default
+bool settings_get_direction_arrows(void);
+void settings_set_direction_arrows(bool enabled);
+
 // System touch navigation (swipes/taps scroll and select) on touchscreen
 // watches; on by default
 bool settings_get_touch_nav(void);

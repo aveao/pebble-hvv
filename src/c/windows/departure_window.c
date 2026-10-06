@@ -129,7 +129,9 @@ static void prv_draw_departure_row(GContext *ctx, int index, int16_t y, int16_t 
   // Draw badge
   GRect badge_rect = GRect(BADGE_MARGIN + inset, cy - BADGE_HEIGHT / 2, BADGE_WIDTH, BADGE_HEIGHT);
   icons_draw_badge(ctx, dep->type, dep->line, badge_rect);
-  icons_draw_direction_arrow(ctx, dep->direction_id, badge_rect);
+  if (settings_get_direction_arrows()) {
+    icons_draw_direction_arrow(ctx, dep->direction_id, badge_rect);
+  }
 
   // Restore text color after badge
   graphics_context_set_text_color(ctx, GColorBlack);
@@ -200,7 +202,7 @@ static void prv_content_update_proc(Layer *layer, GContext *ctx) {
     int16_t y = HEADER_HEIGHT + i * ROW_HEIGHT;
     // Inset for the band where badge, arrow and minutes are drawn, not the
     // whole row
-    int16_t arrow_h = icons_direction_arrow_height();
+    int16_t arrow_h = settings_get_direction_arrows() ? icons_direction_arrow_height() : 0;
     int16_t inset = prv_inset_for(y + (ROW_HEIGHT - BADGE_HEIGHT) / 2 - arrow_h,
                                   BADGE_HEIGHT + arrow_h);
     prv_draw_departure_row(ctx, i, y, bounds.size.w, inset);

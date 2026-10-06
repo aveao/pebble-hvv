@@ -107,16 +107,20 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
   // Settings saved on the phone; one message may carry any of these keys
   Tuple *bold_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_BOLD_TEXT);
   Tuple *touch_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_TOUCH_NAV);
-  if (bold_tuple || touch_tuple) {
+  Tuple *arrows_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_DIRECTION_ARROWS);
+  if (bold_tuple || touch_tuple || arrows_tuple) {
     if (touch_tuple) {
       settings_set_touch_nav(touch_tuple->value->int32 != 0);
     }
-    // Only bold text changes what's drawn
     if (bold_tuple) {
       settings_set_bold_text(bold_tuple->value->int32 != 0);
-      if (s_settings_changed_callback) {
-        s_settings_changed_callback();
-      }
+    }
+    if (arrows_tuple) {
+      settings_set_direction_arrows(arrows_tuple->value->int32 != 0);
+    }
+    // Touch navigation doesn't change what's drawn
+    if ((bold_tuple || arrows_tuple) && s_settings_changed_callback) {
+      s_settings_changed_callback();
     }
     return;
   }

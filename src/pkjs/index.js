@@ -504,7 +504,7 @@ Pebble.addEventListener('showConfiguration', function() {
 });
 
 // Display settings the watch stores itself (see settings.c)
-var WATCH_SETTINGS = ['CONFIG_BOLD_TEXT', 'CONFIG_TOUCH_NAV'];
+var WATCH_SETTINGS = ['CONFIG_BOLD_TEXT', 'CONFIG_TOUCH_NAV', 'CONFIG_DIRECTION_ARROWS'];
 
 // Pick the watch-side settings out of Clay's result as 0/1, or null if none
 // are present (e.g. the bold toggle is hidden on most watches)
