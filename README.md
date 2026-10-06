@@ -14,12 +14,16 @@ A Pebble smartwatch app that displays real-time HVV (Hamburger Verkehrsverbund) 
   <img src=".assets/emery_screenshot_mainpage.png" alt="Station list (Pebble Time 2)" width="228">
   &nbsp;&nbsp;
   <img src=".assets/emery_screenshot_jungfernstieg.png" alt="Jungfernstieg departures (Pebble Time 2)" width="228">
+  &nbsp;&nbsp;
+  <img src=".assets/emery_screenshot_route.png" alt="Route of a 609 bus from Berliner Tor (Pebble Time 2)" width="228">
 </p>
 
 <p align="center">
   <img src=".assets/gabbro_screenshot_mainpage.png" alt="Station list (Pebble Round 2)" width="260">
   &nbsp;&nbsp;
   <img src=".assets/gabbro_screenshot_hbf.png" alt="Hamburg Hbf departures (Pebble Round 2)" width="260">
+  &nbsp;&nbsp;
+  <img src=".assets/gabbro_screenshot_route.png" alt="Route of a 609 bus from Berliner Tor (Pebble Round 2)" width="260">
 </p>
 
 And yeah, it is developed with Claude Code.
