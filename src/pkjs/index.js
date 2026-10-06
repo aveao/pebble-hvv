@@ -25,6 +25,9 @@ var MAX_DEPARTURES = parseInt(localStorage.getItem('max_departures'), 10) || 10;
 var MAX_DEPARTURES_LIMIT_COLOR = 30;
 var MAX_DEPARTURES_LIMIT_BW = 15;
 
+// The watch keeps DIRECTION_LEN - 1 bytes of each direction (see data.h)
+var DIRECTION_MAX_BYTES = 31;
+
 function getPlatform() {
   try {
     return Pebble.getActiveWatchInfo().platform || null;
@@ -331,6 +334,20 @@ function parseDirectionId(id) {
   return (id === DIRECTION_FORWARD || id === DIRECTION_BACKWARD) ? id : 0;
 }
 
+// Cut str to at most maxBytes of UTF-8 without splitting a character
+function truncateUtf8(str, maxBytes) {
+  var bytes = 0;
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    var size = c < 0x80 ? 1 : c < 0x800 ? 2 : (c >= 0xD800 && c <= 0xDBFF) ? 4 : 3;
+    if (bytes + size > maxBytes) return str.substring(0, i);
+    bytes += size;
+    // A surrogate pair is one 4-byte character
+    if (size === 4) i++;
+  }
+  return str;
+}
+
 function sendDepartures(departures, station) {
   var dict = {};
   var count = Math.min(departures.length, getMaxDepartures());
@@ -341,7 +358,9 @@ function sendDepartures(departures, station) {
     var dep = departures[i];
     dict[keys.DEP_LINE + i]  = dep.line;
     dict[keys.DEP_TYPE + i]  = dep.type;
-    dict[keys.DEP_DIR + i]   = dep.direction;
+    // Anything longer is dropped on the watch anyway, and long directions
+    // can push the message past aplite's 2 KB inbox
+    dict[keys.DEP_DIR + i]   = truncateUtf8(dep.direction, DIRECTION_MAX_BYTES);
     dict[keys.DEP_MINS + i]  = dep.minutes;
     dict[keys.DEP_DELAY + i] = dep.delay;
     // Only sent when set, to keep messages small; the watch defaults to false
