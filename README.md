@@ -36,6 +36,7 @@ And yeah, it is developed with Claude Code.
   - S-Bahn: circle
   - Bus: hexagon
   - Ferry: trapezoid
+- **Live routes** — on touchscreen watches, tap a departure to see every stop of its trip with times, delays and where the vehicle is now
 - **Rectangular and round Pebbles** — supports aplite, basalt, diorite, emery, and gabbro (color and B&W, with touch navigation on touchscreen watches)
 
 ## Setup

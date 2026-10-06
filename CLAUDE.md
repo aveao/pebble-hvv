@@ -48,6 +48,7 @@ Gabbro is round, 260x260, color, with a touchscreen. It shares emery's size tabl
 - Departure list: each row is inset with `round_inset()` (`src/c/modules/round.c`) from its on-screen position, so badge and minutes stay inside the circle; rows with no room left draw only their background. Extra bottom padding lets the last row reach the middle. `round_inset()` returns 0 on rectangular screens, so the rectangular path is unchanged.
 - Station list: centre-focused round `MenuLayer`, selected row taller (68 px with the distance/services line, 44 px for one-line rows like favorites) than neighbours (32 px). **MenuLayer caches the new selection's position using the old row's selected height, leaving a gap, and reloading during its selection animation crashes.** So on round the window handles up/down/select itself, tracks the selection (`s_round_sel`), sizes rows from it, reloads, then jumps the menu's selection without animation.
 - Touch navigation (`app_touch_navigation_enable`, under `#ifdef PBL_TOUCH`) is a watch setting, default on, applied in `settings.c`. The emulator cannot inject touch; test on a device.
+- Tapping a departure (touch watches, while touch navigation is on) opens its route. The departure window reads taps from the raw touch stream (`touch_service_subscribe`) while the system touch bridge keeps scrolling the list; the bridge alone doesn't say where a tap landed. To open a route in the emulator, temporarily bind SELECT to `prv_open_route_at()` and revert before commit.
 - Test settings in the emulator with `pebble send-app-message --emulator <p> --int <key>=<value>`, numeric keys from `build/js/message_keys.json`.
 
 Tag platform-specific image resources with `~bw` or `~color` suffixes.
@@ -102,15 +103,18 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 
 ### C side (watch)
 - `src/c/main.c` — App lifecycle, 30s refresh timer, orchestration
-- `src/c/windows/departure_window.c/.h` — MenuLayer-based departure list UI
+- `src/c/windows/departure_window.c/.h` — ScrollLayer-based departure list UI; on touch watches, tapping a row opens its route
+- `src/c/windows/route_window.c/.h` — Touch watches only: a departure's route (stops, times, delays, vehicle position worked out from expected times), refreshed every minute
 - `src/c/modules/data.c/.h` — Departure data model (TransitType enum, Departure struct, persistent storage)
 - `src/c/modules/comm.c/.h` — AppMessage handling (receive departures, send requests to JS)
 - `src/c/modules/icons.c/.h` — Programmatic transit type icon drawing (no bitmap resources)
+- `src/c/modules/course.c/.h` — Stops of the shown route (`PBL_TOUCH` only, up to 64)
 - `src/c/modules/round.c/.h` — `round_inset()` for fitting rows to round screens
 - `src/c/modules/settings.c/.h` — Watch-side settings persisted in Storage: bold departure text (emery, gabbro), direction arrows (default on) and touch navigation (default on), sent from Clay as `CONFIG_BOLD_TEXT` / `CONFIG_DIRECTION_ARROWS` / `CONFIG_TOUCH_NAV`
 
 ### JS side (phone)
-- `src/pkjs/index.js` — Clay config init, AppMessage bridge, demo data, response parsing
+- `src/pkjs/index.js` — Clay config init, AppMessage bridge, demo data, response parsing. Keeps the departure list it last sent so a `REQUEST_COURSE` (station, row index, line) maps back to a trip
+- `src/pkjs/course.js` — Pure route helpers: GTI dateTime building/parsing with Hamburg's UTC offset, `departureCourse` response to stop list, demo route
 - `src/pkjs/api.js` — Single `request(endpoint, body, cb)` entry point. Picks one of three adapters via `pickAdapter()`:
   - **gti** (BYO): HMAC-signs and calls `gti.geofox.de` directly when both `gti_user` and `gti_password` are in localStorage
   - **proxy** (default for shipped builds): calls the Cloudflare Worker at `PROXY_API_BASE` with `Authorization: Bearer <PROXY_SECRET>` + `X-Watch-Token: <token>` headers, when build-time config is present and `Pebble.getWatchToken()` returns a valid token
@@ -133,7 +137,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 
 Default for the published `.pbw` is **proxy** — requests go to the Cloudflare Worker at `pebble-hvv-api.ave.zone`, which signs with the maintainer's HVV credentials and forwards to `gti.geofox.de`. **BYO mode** signs HMAC-SHA1 directly from the phone using user-entered credentials. **Demo mode** never makes an HTTP request. The watch C side and the JS response parser are mode-agnostic — the proxy returns GTI-shape JSON (just whitelisted to a subset of fields).
 
-Used response fields: `results[].name/type/distance/serviceTypes` (from `checkName`); `departures[].line.name/type.{shortInfo,longInfo}/direction`, `direction`, `directionId`, `timeOffset`, `delay`, `cancelled` (from `departureList`, requested with `version: 63`).
+Used response fields: `results[].name/type/distance/serviceTypes` (from `checkName`); `departures[].line.name/type.{shortInfo,longInfo}/direction`, `direction`, `directionId`, `timeOffset`, `delay`, `cancelled`, plus `serviceId`, `line.id/dlid`, `station.id/combinedName` and the top-level `time` to identify a trip (from `departureList`, requested with `version: 63`); `courseElements[].fromStation/toStation.{name,id}`, `depTime`, `arrTime`, `depDelay`, `arrDelay`, `fromCancelled`, `toCancelled` (from `departureCourse`, where times are planned and delays are in seconds on top).
 
 ## Conventions
 

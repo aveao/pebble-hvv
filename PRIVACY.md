@@ -45,6 +45,7 @@ When the app makes a request in proxy mode, the following are transmitted to `pe
 - A **watch token** sent in the `X-Watch-Token` request header. This is a unique token returned by the Pebble mobile app's `getWatchToken()` API; it is derived from your watch's hardware serial mixed with this app's UUID, so it is stable per-device but app-scoped i.e. it cannot be correlated with how you use any other Pebble app. Used for abuse prevention.
 - For station search: your **approximate GPS coordinates** at the moment you opened the app, plus a search radius and station-type filter.
 - For departure lookup: the **name of the station you selected**, plus the requested time window.
+- For a departure's route (touchscreen watches, when you tap a departure): HVV's identifiers for that trip and stop, and its departure time.
 - Your **IP address** (received automatically by Cloudflare as the network endpoint of your request).
 
 ### 3.3 Sent to hvv Hamburger Verkehrsverbund Gesellschaft mbH / gti.geofox.de (HBT Hamburger Berater Team GmbH)
