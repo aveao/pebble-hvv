@@ -63,6 +63,9 @@ static TextLayer *s_loading_layer;
 static bool s_received_data;
 static AppTimer *s_inactivity_timer;
 static AppTimer *s_refresh_timer;
+// Next retry delay after the phone doesn't answer; doubles up to the refresh
+// interval and resets once the phone answers
+static uint32_t s_timeout_retry_ms = RETRY_INTERVAL_MS;
 // Last fetch error; shown until the next successful refresh
 static char s_error[32];
 
@@ -282,10 +285,28 @@ static void prv_window_load(Window *window) {
 
 static void prv_refresh_timer_callback(void *context);
 
+// Delay before the next departure request, given how the last one went.
+// Retry soon if it only collided with another message, back off if the
+// phone didn't answer, and otherwise (sent, or e.g. disconnected) wait for
+// the normal refresh
+static uint32_t prv_next_request_delay(AppMessageResult result) {
+  switch (result) {
+    case APP_MSG_BUSY:
+    case APP_MSG_SEND_REJECTED:
+      return RETRY_INTERVAL_MS;
+    case APP_MSG_SEND_TIMEOUT: {
+      uint32_t delay = s_timeout_retry_ms;
+      s_timeout_retry_ms = delay * 2 < REFRESH_INTERVAL_MS ? delay * 2 : REFRESH_INTERVAL_MS;
+      return delay;
+    }
+    default:
+      return REFRESH_INTERVAL_MS;
+  }
+}
+
 static void prv_request_departures(void) {
-  // Retry soon if the outbox was busy, otherwise wait for the next refresh
-  bool sent = comm_request_departures(data_get_station_name());
-  s_refresh_timer = app_timer_register(sent ? REFRESH_INTERVAL_MS : RETRY_INTERVAL_MS,
+  AppMessageResult result = comm_request_departures(data_get_station_name());
+  s_refresh_timer = app_timer_register(prv_next_request_delay(result),
                                        prv_refresh_timer_callback, NULL);
 }
 
@@ -315,6 +336,7 @@ static void prv_window_unload(Window *window) {
 static void prv_window_appear(Window *window) {
   s_received_data = false;
   s_error[0] = '\0';
+  s_timeout_retry_ms = RETRY_INTERVAL_MS;
   // Drop anything that arrived after the last departure window closed
   data_set_count(0);
   text_layer_set_text(s_loading_layer, "Loading...");
@@ -348,6 +370,7 @@ void departure_window_push(void) {
 
 void departure_window_refresh(void) {
   s_received_data = true;
+  s_timeout_retry_ms = RETRY_INTERVAL_MS;
   s_error[0] = '\0';
   prv_update_content_size();
 }
@@ -358,14 +381,15 @@ void departure_window_redraw(void) {
   }
 }
 
-void departure_window_request_failed(void) {
+void departure_window_request_failed(AppMessageResult reason) {
   // Only retry while the refresh cycle is running (window visible)
   if (s_refresh_timer) {
-    app_timer_reschedule(s_refresh_timer, RETRY_INTERVAL_MS);
+    app_timer_reschedule(s_refresh_timer, prv_next_request_delay(reason));
   }
 }
 
 void departure_window_show_error(const char *message) {
+  s_timeout_retry_ms = RETRY_INTERVAL_MS;
   text_copy_utf8(s_error, message, sizeof(s_error));
   prv_update_content_size();
 }

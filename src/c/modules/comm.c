@@ -160,7 +160,7 @@ static void prv_outbox_failed_handler(DictionaryIterator *iter,
   // The phone rejected a departure request (e.g. it collided with a message
   // from JS); let the caller retry instead of waiting for the next refresh
   if (dict_find(iter, MESSAGE_KEY_REQUEST_DEPARTURES) && s_departures_failed_callback) {
-    s_departures_failed_callback();
+    s_departures_failed_callback(reason);
   }
 }
 
@@ -199,20 +199,19 @@ void comm_deinit(void) {
   app_message_deregister_callbacks();
 }
 
-bool comm_request_departures(const char *station_name) {
+AppMessageResult comm_request_departures(const char *station_name) {
   DictionaryIterator *out;
   AppMessageResult result = app_message_outbox_begin(&out);
   if (result != APP_MSG_OK) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox begin failed: %d", (int)result);
-    return false;
+    return result;
   }
   dict_write_cstring(out, MESSAGE_KEY_REQUEST_DEPARTURES, station_name);
   result = app_message_outbox_send();
   if (result != APP_MSG_OK) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed: %d", (int)result);
-    return false;
   }
-  return true;
+  return result;
 }
 
 void comm_request_stations(void) {
