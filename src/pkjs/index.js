@@ -328,12 +328,6 @@ function sortByExpectedTime(departures) {
     .map(function(entry) { return entry.dep; });
 }
 
-// GTI's directionId (1 = forward, 6 = backward along the line). The handbook
-// documents it as departure.direction, but responses carry it as directionId.
-function parseDirectionId(id) {
-  return (id === DIRECTION_FORWARD || id === DIRECTION_BACKWARD) ? id : 0;
-}
-
 // Cut str to at most maxBytes of UTF-8 without splitting a character
 function truncateUtf8(str, maxBytes) {
   var bytes = 0;
@@ -421,7 +415,10 @@ function fetchDepartures(station) {
           // GTI reports delay in seconds; the watch works in minutes
           delay: Math.round((d.delay || 0) / 60),
           cancelled: !!d.cancelled,
-          directionId: parseDirectionId(d.directionId),
+          // GTI's directionId (1 = forward, 6 = backward along the line); the
+          // handbook documents it as departure.direction. The watch ignores
+          // other values.
+          directionId: typeof d.directionId === 'number' ? d.directionId : 0,
         });
       }
       sendDepartures(sortByExpectedTime(departures), station);

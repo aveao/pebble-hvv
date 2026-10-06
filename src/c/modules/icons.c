@@ -171,7 +171,8 @@ int16_t icons_direction_arrow_height(void) {
 }
 
 void icons_draw_direction_arrow(GContext *ctx, DirectionId direction_id, GRect badge_rect) {
-  if (direction_id != DIRECTION_ID_FORWARD && direction_id != DIRECTION_ID_BACKWARD) return;
+  // comm.c maps anything but forward/backward to unknown
+  if (direction_id == DIRECTION_ID_UNKNOWN) return;
   bool right = direction_id == DIRECTION_ID_FORWARD;
 
   int x = right ? badge_rect.origin.x + badge_rect.size.w - ARROW_W : badge_rect.origin.x;
