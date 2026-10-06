@@ -69,7 +69,8 @@
       "COURSE_TIME[64]",
       "COURSE_DELAY[64]",
       "COURSE_CANCELLED[64]",
-      "COURSE_ERROR"
+      "COURSE_ERROR",
+      "COURSE_STOP_QUERY[64]"
     ],
     "projectRepositoryUrl": "https://github.com/aveao/pebble-hvv",
     "screenshots": [

@@ -104,7 +104,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 ### C side (watch)
 - `src/c/main.c` — App lifecycle, 30s refresh timer, orchestration
 - `src/c/windows/departure_window.c/.h` — ScrollLayer-based departure list UI; on touch watches, tapping a row opens its route
-- `src/c/windows/route_window.c/.h` — Touch watches only: a departure's route (stops, times, delays, vehicle position worked out from expected times), refreshed every minute
+- `src/c/windows/route_window.c/.h` — Touch watches only: a departure's route (stops, times, delays, vehicle position worked out from expected times), refreshed every minute. Selecting a stop shows that stop's departures in place of the departure list (Back then goes to the station list)
 - `src/c/modules/data.c/.h` — Departure data model (TransitType enum, Departure struct, persistent storage)
 - `src/c/modules/comm.c/.h` — AppMessage handling (receive departures, send requests to JS)
 - `src/c/modules/icons.c/.h` — Programmatic transit type icon drawing (no bitmap resources)
@@ -137,7 +137,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 
 Default for the published `.pbw` is **proxy** — requests go to the Cloudflare Worker at `pebble-hvv-api.ave.zone`, which signs with the maintainer's HVV credentials and forwards to `gti.geofox.de`. **BYO mode** signs HMAC-SHA1 directly from the phone using user-entered credentials. **Demo mode** never makes an HTTP request. The watch C side and the JS response parser are mode-agnostic — the proxy returns GTI-shape JSON (just whitelisted to a subset of fields).
 
-Used response fields: `results[].name/type/distance/serviceTypes` (from `checkName`); `departures[].line.name/type.{shortInfo,longInfo}/direction`, `direction`, `directionId`, `timeOffset`, `delay`, `cancelled`, plus `serviceId`, `line.id/dlid`, `station.id/combinedName` and the top-level `time` to identify a trip (from `departureList`, requested with `version: 63`); `courseElements[].fromStation/toStation.{name,id}`, `depTime`, `arrTime`, `depDelay`, `arrDelay`, `fromCancelled`, `toCancelled` (from `departureCourse`, where times are planned and delays are in seconds on top).
+Used response fields: `results[].name/type/distance/serviceTypes` (from `checkName`); `departures[].line.name/type.{shortInfo,longInfo}/direction`, `direction`, `directionId`, `timeOffset`, `delay`, `cancelled`, plus `serviceId`, `line.id/dlid`, `station.id/combinedName` and the top-level `time` to identify a trip (from `departureList`, requested with `version: 63`); `courseElements[].fromStation/toStation.{name,combinedName,id}` (`combinedName`, e.g. "Ahrensburg, Rosenhof", looks a stop up again: bare names are ambiguous outside Hamburg), `depTime`, `arrTime`, `depDelay`, `arrDelay`, `fromCancelled`, `toCancelled` (from `departureCourse`, where times are planned and delays are in seconds on top).
 
 ## Conventions
 

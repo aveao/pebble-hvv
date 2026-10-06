@@ -468,6 +468,8 @@ function sendCourse(result, reqId) {
     dict[keys.COURSE_DELAY + i] = stop.delay;
     // Only sent when set, to keep messages small
     if (stop.cancelled) dict[keys.COURSE_CANCELLED + i] = 1;
+    // Name to look the stop's departures up by, when it isn't the shown one
+    if (stop.query && stop.query !== stop.name) dict[keys.COURSE_STOP_QUERY + i] = stop.query;
   }
   sendToWatch(dict, 'Course');
 }

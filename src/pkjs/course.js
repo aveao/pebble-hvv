@@ -7,6 +7,8 @@ var MAX_COURSE_STOPS = 64;
 var STOPS_BEFORE_FOCUS = 16;
 // The watch keeps 31 bytes of each name (see data.h / course.h)
 var NAME_MAX_BYTES = 31;
+// and 63 of the name used to look a stop's departures up (STATION_NAME_LEN)
+var QUERY_MAX_BYTES = 63;
 
 var DAY_MS = 86400000;
 var HOUR_MS = 3600000;
@@ -77,9 +79,14 @@ function delayMinutes(seconds) {
   return typeof seconds === 'number' ? Math.round(seconds / 60) : 0;
 }
 
+// query is the name to look the stop's departures up by: combinedName
+// includes the town ("Ahrensburg, Rosenhof"), as bare names are ambiguous
+// outside Hamburg
 function makeStop(station, time, delay, cancelled) {
+  var name = (station && station.name) || '?';
   return {
-    name: truncateUtf8((station && station.name) || '?', NAME_MAX_BYTES),
+    name: truncateUtf8(name, NAME_MAX_BYTES),
+    query: truncateUtf8((station && station.combinedName) || name, QUERY_MAX_BYTES),
     id: station && station.id,
     time: parseGtiTime(time) || 0,
     delay: delayMinutes(delay),

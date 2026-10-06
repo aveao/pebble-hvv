@@ -124,8 +124,11 @@ static void prv_parse_course(DictionaryIterator *iter) {
     Tuple *planned_t = dict_find(iter, MESSAGE_KEY_COURSE_TIME + i);
     Tuple *delay_t = dict_find(iter, MESSAGE_KEY_COURSE_DELAY + i);
     Tuple *cancelled_t = dict_find(iter, MESSAGE_KEY_COURSE_CANCELLED + i);
+    Tuple *query_t = dict_find(iter, MESSAGE_KEY_COURSE_STOP_QUERY + i);
     if (name_t && planned_t) {
-      course_update_stop(stored++, name_t->value->cstring, (time_t)planned_t->value->int32,
+      course_update_stop(stored++, name_t->value->cstring,
+                         query_t ? query_t->value->cstring : NULL,
+                         (time_t)planned_t->value->int32,
                          delay_t ? (int16_t)delay_t->value->int32 : 0,
                          cancelled_t && cancelled_t->value->int32);
     }

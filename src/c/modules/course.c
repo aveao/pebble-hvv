@@ -35,14 +35,19 @@ const CourseStop *course_get_stop(int index) {
   return &s_stops[index];
 }
 
-void course_update_stop(int index, const char *name, time_t planned, int16_t delay,
-                        bool cancelled) {
+void course_update_stop(int index, const char *name, const char *query, time_t planned,
+                        int16_t delay, bool cancelled) {
   if (index < 0 || index >= MAX_COURSE_STOPS) return;
   CourseStop *stop = &s_stops[index];
   text_copy_utf8(stop->name, name, sizeof(stop->name));
+  text_copy_utf8(stop->query, query ? query : "", sizeof(stop->query));
   stop->planned = planned;
   stop->delay = delay;
   stop->cancelled = cancelled;
+}
+
+const char *course_stop_query(const CourseStop *stop) {
+  return stop->query[0] ? stop->query : stop->name;
 }
 
 #endif

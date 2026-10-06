@@ -7,6 +7,7 @@
 #include "../modules/icons.h"
 #include "../modules/round.h"
 #include "../modules/text.h"
+#include "../modules/data.h"
 
 // Touch watches (emery, gabbro) share one size table
 #define ROW_H 36
@@ -326,6 +327,15 @@ static void prv_reset_inactivity_timer(void) {
   }
 }
 
+// Selecting a stop shows its departures, in place of the list the route
+// was opened from (the departure window is a single instance)
+static void prv_select_click(MenuLayer *menu_layer, MenuIndex *index, void *context) {
+  const CourseStop *stop = course_get_stop(index->row);
+  if (!stop) return;
+  data_set_station_name(course_stop_query(stop));
+  window_stack_remove(s_window, true);
+}
+
 static void prv_selection_changed(MenuLayer *menu_layer, MenuIndex new_index,
                                   MenuIndex old_index, void *context) {
   prv_reset_inactivity_timer();
@@ -364,6 +374,7 @@ static void prv_window_load(Window *window) {
     .get_num_rows = prv_get_num_rows,
     .get_cell_height = prv_get_cell_height,
     .draw_row = prv_draw_row,
+    .select_click = prv_select_click,
     .selection_changed = prv_selection_changed,
   });
   // A light highlight, so the bold user's stop stays the one that stands out
