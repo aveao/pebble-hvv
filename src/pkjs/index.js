@@ -4,6 +4,8 @@ var clay = new Clay(clayConfig, null, { autoHandleEvents: false });
 
 var keys = require('message_keys');
 var api = require('./api');
+var course = require('./course');
+var truncateUtf8 = course.truncateUtf8;
 
 // Transit type enum matching C side
 var TRANSIT_BUS = 0;
@@ -347,20 +349,6 @@ function sortByExpectedTime(departures) {
       return (a.dep.minutes + a.dep.delay) - (b.dep.minutes + b.dep.delay) || a.i - b.i;
     })
     .map(function(entry) { return entry.dep; });
-}
-
-// Cut str to at most maxBytes of UTF-8 without splitting a character
-function truncateUtf8(str, maxBytes) {
-  var bytes = 0;
-  for (var i = 0; i < str.length; i++) {
-    var c = str.charCodeAt(i);
-    var size = c < 0x80 ? 1 : c < 0x800 ? 2 : (c >= 0xD800 && c <= 0xDBFF) ? 4 : 3;
-    if (bytes + size > maxBytes) return str.substring(0, i);
-    bytes += size;
-    // A surrogate pair is one 4-byte character
-    if (size === 4) i++;
-  }
-  return str;
 }
 
 function sendDepartures(departures, station) {
