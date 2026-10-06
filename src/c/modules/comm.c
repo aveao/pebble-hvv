@@ -161,8 +161,7 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
     if (arrows_tuple) {
       settings_set_direction_arrows(arrows_tuple->value->int32 != 0);
     }
-    // Touch navigation doesn't change what's drawn
-    if ((bold_tuple || arrows_tuple) && s_settings_changed_callback) {
+    if (s_settings_changed_callback) {
       s_settings_changed_callback();
     }
     return;

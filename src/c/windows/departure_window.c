@@ -5,6 +5,7 @@
 #include "../modules/text.h"
 #include "../modules/settings.h"
 #include "../modules/round.h"
+#include "route_window.h"
 
 // Emery and gabbro (round, 260x260) share sizes; round layouts inset rows
 #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
@@ -63,6 +64,7 @@ static TextLayer *s_loading_layer;
 static bool s_received_data;
 static AppTimer *s_inactivity_timer;
 static AppTimer *s_refresh_timer;
+static bool s_visible;
 // Next retry delay after the phone doesn't answer; doubles up to the refresh
 // interval and resets once the phone answers
 static uint32_t s_timeout_retry_ms = RETRY_INTERVAL_MS;
@@ -283,6 +285,78 @@ static void prv_window_load(Window *window) {
   prv_update_content_size();
 }
 
+#ifdef PBL_TOUCH
+// Tapping a row opens its route. Taps are read from the raw touch stream:
+// the system touch bridge keeps scrolling the list, but doesn't say where a
+// tap landed. A touch is a tap if it lifts within TAP_MAX_MS and never moves
+// more than TAP_SLOP px.
+#define TAP_SLOP 10
+#define TAP_MAX_MS 500
+
+static bool s_touch_subscribed;
+static bool s_touch_is_tap;
+static GPoint s_touch_start;
+static uint32_t s_touch_start_ms;
+
+static uint32_t prv_now_ms(void) {
+  time_t secs;
+  uint16_t ms;
+  time_ms(&secs, &ms);
+  return (uint32_t)secs * 1000 + ms;
+}
+
+static void prv_open_route_at(int16_t screen_y) {
+  // Content offset is <= 0 once scrolled, so subtracting it adds the scroll
+  int16_t offset = scroll_layer_get_content_offset(s_scroll_layer).y;
+  int16_t content_y = screen_y - STATUS_BAR_LAYER_HEIGHT - offset - HEADER_HEIGHT;
+  int row = content_y >= 0 ? content_y / ROW_HEIGHT : -1;
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Tap at y=%d: row %d", screen_y, row);
+  Departure *dep = data_get_departure(row);
+  if (!dep) return;
+  prv_reset_inactivity_timer();
+  route_window_push(data_get_station_name(), row, dep->line, dep->type, dep->direction);
+}
+
+static bool prv_moved_past_slop(const TouchEvent *event) {
+  return abs(event->x - s_touch_start.x) > TAP_SLOP || abs(event->y - s_touch_start.y) > TAP_SLOP;
+}
+
+static void prv_touch_handler(const TouchEvent *event, void *context) {
+  if (event->non_navigational) return;
+  switch (event->type) {
+    case TouchEvent_Touchdown:
+      s_touch_start = GPoint(event->x, event->y);
+      s_touch_start_ms = prv_now_ms();
+      s_touch_is_tap = true;
+      break;
+    case TouchEvent_PositionUpdate:
+      if (prv_moved_past_slop(event)) s_touch_is_tap = false;
+      break;
+    case TouchEvent_Liftoff:
+      if (s_touch_is_tap && !prv_moved_past_slop(event) &&
+          prv_now_ms() - s_touch_start_ms <= TAP_MAX_MS) {
+        prv_open_route_at(s_touch_start.y);
+      }
+      s_touch_is_tap = false;
+      break;
+  }
+}
+#endif
+
+// Taps only open routes while the window is visible and touch navigation is on
+static void prv_update_touch_subscription(void) {
+#ifdef PBL_TOUCH
+  bool want = s_visible && settings_get_touch_nav();
+  if (want == s_touch_subscribed) return;
+  if (want) {
+    touch_service_subscribe(prv_touch_handler, NULL);
+  } else {
+    touch_service_unsubscribe();
+  }
+  s_touch_subscribed = want;
+#endif
+}
+
 static void prv_refresh_timer_callback(void *context);
 
 // Delay before the next departure request, given how the last one went.
@@ -345,9 +419,13 @@ static void prv_window_appear(Window *window) {
   prv_stop_refresh();
   prv_request_departures();
   prv_reset_inactivity_timer();
+  s_visible = true;
+  prv_update_touch_subscription();
 }
 
 static void prv_window_disappear(Window *window) {
+  s_visible = false;
+  prv_update_touch_subscription();
   prv_stop_refresh();
   if (s_inactivity_timer) {
     app_timer_cancel(s_inactivity_timer);
@@ -379,6 +457,7 @@ void departure_window_redraw(void) {
   if (s_content_layer) {
     layer_mark_dirty(s_content_layer);
   }
+  prv_update_touch_subscription();
 }
 
 void departure_window_request_failed(AppMessageResult reason) {
