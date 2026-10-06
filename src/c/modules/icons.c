@@ -84,16 +84,20 @@ static void prv_draw_bus(GContext *ctx, const char *line, GRect rect) {
   GColor fill = PBL_IF_COLOR_ELSE(GColorRed, GColorBlack);
   graphics_context_set_fill_color(ctx, fill);
 
+  // Filled paths include their edge pixels, so the far edges are at
+  // size - 1 to keep the shape inside rect
   int p = rect.size.h / 3;
+  int r = rect.size.w - 1;
+  int b = rect.size.h - 1;
   GPathInfo info = {
     .num_points = 6,
     .points = (GPoint[]) {
       {p, 0},
-      {rect.size.w - p, 0},
-      {rect.size.w, rect.size.h / 2},
-      {rect.size.w - p, rect.size.h},
-      {p, rect.size.h},
-      {0, rect.size.h / 2}
+      {r - p, 0},
+      {r, b / 2},
+      {r - p, b},
+      {p, b},
+      {0, b / 2}
     }
   };
   GPath *path = gpath_create(&info);
@@ -128,14 +132,17 @@ static void prv_draw_ferry(GContext *ctx, const char *line, GRect rect) {
   graphics_context_set_fill_color(ctx, fill);
 
   // Trapezoid: wider top, narrower bottom (boat hull shape)
+  // Far edges at size - 1, as in prv_draw_bus
   int inset = 3;
+  int r = rect.size.w - 1;
+  int b = rect.size.h - 1;
   GPathInfo info = {
     .num_points = 4,
     .points = (GPoint[]) {
       {0, 0},
-      {rect.size.w, 0},
-      {rect.size.w - inset, rect.size.h},
-      {inset, rect.size.h}
+      {r, 0},
+      {r - inset, b},
+      {inset, b}
     }
   };
   GPath *path = gpath_create(&info);
