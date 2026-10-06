@@ -156,6 +156,16 @@ static void prv_draw_unknown(GContext *ctx, const char *line, GRect rect) {
   prv_draw_label(ctx, line, rect, GColorWhite);
 }
 
+GColor icons_line_color(TransitType type, const char *line) {
+  switch (type) {
+    case TRANSIT_BUS:    return PBL_IF_COLOR_ELSE(GColorRed, GColorBlack);
+    case TRANSIT_SBAHN:  return prv_sbahn_color(line);
+    case TRANSIT_UBAHN:  return prv_ubahn_color(line);
+    case TRANSIT_FERRY:  return PBL_IF_COLOR_ELSE(GColorTiffanyBlue, GColorBlack);
+    default:             return PBL_IF_COLOR_ELSE(GColorDarkGray, GColorBlack);
+  }
+}
+
 void icons_draw_badge(GContext *ctx, TransitType type, const char *line, GRect rect) {
   switch (type) {
     case TRANSIT_BUS:    prv_draw_bus(ctx, line, rect);     break;
