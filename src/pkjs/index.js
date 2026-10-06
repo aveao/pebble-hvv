@@ -351,9 +351,14 @@ function sortByExpectedTime(departures) {
     .map(function(entry) { return entry.dep; });
 }
 
+// The departure list last sent to the watch, so a tapped row's index maps
+// back to its trip (see fetchCourse)
+var lastDepartures = null;
+
 function sendDepartures(departures, station) {
   var dict = {};
   var count = Math.min(departures.length, getMaxDepartures());
+  lastDepartures = { station: station, deps: departures.slice(0, count) };
   dict[keys.DEP_COUNT] = count;
   dict[keys.DEP_STATION] = station;
 
@@ -416,6 +421,7 @@ function fetchDepartures(station) {
         // only take it as the destination when it's text
         var dir = (d.line && d.line.direction) ||
           (typeof d.direction === 'string' ? d.direction : '');
+        var planned = course.plannedTime(resp.time, d.timeOffset || 0);
         departures.push({
           line: lineName,
           type: lineType,
@@ -428,12 +434,101 @@ function fetchDepartures(station) {
           // handbook documents it as departure.direction. The watch ignores
           // other values.
           directionId: typeof d.directionId === 'number' ? d.directionId : 0,
+          // What departureCourse needs to find this trip
+          trip: {
+            serviceId: d.serviceId,
+            lineId: d.line && d.line.dlid,
+            lineKey: d.line && d.line.id,
+            station: (d.station && d.station.id) ?
+              { id: d.station.id, name: d.station.combinedName, type: 'STATION' } :
+              { name: station, type: 'STATION' },
+            time: planned && planned.time,
+            plannedSecs: planned && planned.secs,
+          },
         });
       }
       sendDepartures(sortByExpectedTime(departures), station);
     } else {
       sendDepartures([], station);
     }
+  });
+}
+
+// ---- Route (departureCourse) ----
+
+function sendCourse(result, reqId) {
+  var dict = {};
+  dict[keys.COURSE_REQ_ID] = reqId;
+  dict[keys.COURSE_COUNT] = result.stops.length;
+  dict[keys.COURSE_FOCUS] = result.focus;
+  for (var i = 0; i < result.stops.length; i++) {
+    var stop = result.stops[i];
+    dict[keys.COURSE_STOP + i] = stop.name;
+    dict[keys.COURSE_TIME + i] = stop.time;
+    dict[keys.COURSE_DELAY + i] = stop.delay;
+    // Only sent when set, to keep messages small
+    if (stop.cancelled) dict[keys.COURSE_CANCELLED + i] = 1;
+  }
+  sendToWatch(dict, 'Course');
+}
+
+function sendCourseError(msg, reqId) {
+  var dict = {};
+  dict[keys.COURSE_REQ_ID] = reqId;
+  dict[keys.COURSE_ERROR] = msg;
+  sendToWatch(dict, 'Course');
+}
+
+// The watch keeps LINE_NAME_LEN - 1 bytes of each line name (see data.h)
+var LINE_MAX_BYTES = 7;
+
+// Route of the departure at index in the list last sent for station. The
+// watch also sends the row's line name, so a list that changed since the
+// tap isn't answered with some other trip's route.
+function fetchCourse(station, index, line, reqId) {
+  var dep = lastDepartures && lastDepartures.station === station &&
+    lastDepartures.deps[index];
+  if (!dep || truncateUtf8(dep.line, LINE_MAX_BYTES) !== line) {
+    console.log('fetchCourse: no matching departure for ' + station + ' #' + index);
+    sendCourseError('List changed, try again', reqId);
+    return;
+  }
+
+  if (api.getMode() === 'demo') {
+    sendCourse(course.demoCourse(dep, station, Date.now() / 1000), reqId);
+    return;
+  }
+
+  var trip = dep.trip;
+  if (!trip || typeof trip.serviceId !== 'number' || !trip.time) {
+    sendCourseError('Route unavailable', reqId);
+    return;
+  }
+  var body = {
+    version: 63,
+    serviceId: trip.serviceId,
+    station: trip.station,
+    time: trip.time,
+    segments: 'ALL',
+  };
+  // GTI wants at least one of these
+  if (trip.lineId) body.lineId = trip.lineId;
+  if (trip.lineKey) body.lineKey = trip.lineKey;
+
+  api.request('departureCourse', body, function(resp, err) {
+    if (err) {
+      console.log('departureCourse error: ' + err);
+      sendCourseError(err, reqId);
+      return;
+    }
+    var result = course.buildStops(resp, trip.station.id, trip.plannedSecs);
+    if (!result) {
+      // GTI errors come back as a returnCode + errorText (BYO), or as an
+      // empty course (proxy)
+      sendCourseError((resp && resp.errorText) || 'Route unavailable', reqId);
+      return;
+    }
+    sendCourse(course.windowStops(result, course.MAX_COURSE_STOPS), reqId);
   });
 }
 
@@ -465,6 +560,12 @@ Pebble.addEventListener('appmessage', function(e) {
   if (typeof reqDeps === 'string' && reqDeps) {
     console.log('-> REQUEST_DEPARTURES: ' + reqDeps);
     fetchDepartures(reqDeps);
+  }
+  var reqCourse = e.payload[keys.REQUEST_COURSE];
+  if (typeof reqCourse === 'string' && reqCourse) {
+    console.log('-> REQUEST_COURSE: ' + reqCourse);
+    fetchCourse(reqCourse, e.payload[keys.COURSE_DEP_INDEX],
+      e.payload[keys.COURSE_DEP_LINE], e.payload[keys.COURSE_REQ_ID]);
   }
 });
 

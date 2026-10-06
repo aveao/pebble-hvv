@@ -58,7 +58,18 @@
       "CONFIG_BOLD_TEXT",
       "CONFIG_TOUCH_NAV",
       "CONFIG_DIRECTION_ARROWS",
-      "STATIONS_ERROR"
+      "STATIONS_ERROR",
+      "REQUEST_COURSE",
+      "COURSE_DEP_INDEX",
+      "COURSE_DEP_LINE",
+      "COURSE_REQ_ID",
+      "COURSE_COUNT",
+      "COURSE_FOCUS",
+      "COURSE_STOP[64]",
+      "COURSE_TIME[64]",
+      "COURSE_DELAY[64]",
+      "COURSE_CANCELLED[64]",
+      "COURSE_ERROR"
     ],
     "projectRepositoryUrl": "https://github.com/aveao/pebble-hvv",
     "screenshots": [
