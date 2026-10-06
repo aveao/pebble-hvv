@@ -255,7 +255,13 @@ var DEMO_NEARBY = [
   { name: 'Demohaus', dist: 45, services: SERVICE_UBAHN | SERVICE_BUS },
 ];
 
+// Bumped on each fetchStations call, so a slow GPS or checkName callback from
+// an earlier call can't send its outdated list over a newer one (e.g. after
+// favorites were edited)
+var stationFetchGen = 0;
+
 function fetchStations() {
+  var gen = ++stationFetchGen;
   var favorites = getFavorites();
   var mode = api.getMode();
 
@@ -273,6 +279,7 @@ function fetchStations() {
 
   // Fetch nearby stations asynchronously
   getLocation(function(lat, lon) {
+    if (gen !== stationFetchGen) return;
     // Favorites (if any) were already sent above; otherwise report the
     // failure so the watch leaves its loading state
     if (!lat || !lon) {
@@ -293,6 +300,7 @@ function fetchStations() {
       allowTypeSwitch: true,
     };
     api.request('checkName', checkNameBody, function(resp, err) {
+      if (gen !== stationFetchGen) return;
       if (err) {
         console.log('checkName error: ' + err);
         if (favorites.length === 0) sendStationsError(err);
