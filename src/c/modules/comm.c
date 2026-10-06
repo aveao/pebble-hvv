@@ -154,7 +154,11 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
   Tuple *bold_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_BOLD_TEXT);
   Tuple *touch_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_TOUCH_NAV);
   Tuple *arrows_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_DIRECTION_ARROWS);
-  if (bold_tuple || touch_tuple || arrows_tuple) {
+  Tuple *vibe_tuple = dict_find(iter, MESSAGE_KEY_CONFIG_ARRIVAL_VIBE);
+  if (bold_tuple || touch_tuple || arrows_tuple || vibe_tuple) {
+    if (vibe_tuple) {
+      settings_set_arrival_vibe(vibe_tuple->value->int32 != 0);
+    }
     if (touch_tuple) {
       settings_set_touch_nav(touch_tuple->value->int32 != 0);
     }

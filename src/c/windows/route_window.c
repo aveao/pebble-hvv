@@ -8,6 +8,7 @@
 #include "../modules/round.h"
 #include "../modules/text.h"
 #include "../modules/data.h"
+#include "../modules/settings.h"
 
 // Touch watches (emery, gabbro) share one size table
 #define ROW_H 36
@@ -35,6 +36,9 @@
 #define RETRY_INTERVAL_MS 2000
 // Say so if nothing has come back this long after opening
 #define NO_REPLY_MS 20000
+// Vibrate when the vehicle is this close to the user's stop (if enabled). The
+// setting says "a minute"; 90 s gives time to get ready
+#define ARRIVAL_VIBE_SECS 90
 // Close after 15 minutes without input to stop unnecessary API requests
 #define INACTIVITY_TIMEOUT_MS (15 * 60 * 1000)
 
@@ -58,6 +62,11 @@ static TransitType s_type;
 static char s_direction[DIRECTION_LEN];
 // Last request error; shown until the next successful refresh
 static char s_error[32];
+// Arrival vibration: armed once the vehicle has been seen more than
+// ARRIVAL_VIBE_SECS from the user's stop, so opening the route of a
+// departure that's about to arrive doesn't vibrate; fires once per window
+static bool s_vibe_armed;
+static bool s_vibe_done;
 
 // ---- Position ----
 
@@ -97,6 +106,39 @@ static int16_t prv_marker_y(time_t now, bool *started) {
   int next = prv_next_served(at + 1);
   if (next < 0) return prv_row_center(at);  // trip has ended
   return (prv_row_center(at) + prv_row_center(next)) / 2;
+}
+
+// Seconds until the vehicle reaches the user's stop (negative once it has),
+// or false if that stop isn't served
+static bool prv_secs_to_focus(time_t now, int32_t *secs) {
+  const CourseStop *stop = course_get_stop(course_get_focus());
+  if (!stop || stop->cancelled) return false;
+  *secs = prv_expected(stop) - now;
+  return true;
+}
+
+// Called on new data and every minute: vibrate once when the vehicle comes
+// within a minute of the user's stop, if it was seen further away first
+static void prv_check_arrival(void) {
+  int32_t secs;
+  if (s_vibe_done || !settings_get_arrival_vibe() || !prv_secs_to_focus(time(NULL), &secs)) {
+    return;
+  }
+  if (secs > ARRIVAL_VIBE_SECS) {
+    s_vibe_armed = true;
+  } else if (s_vibe_armed && secs > 0) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "Arriving in %d s, vibrating", (int)secs);
+    vibes_double_pulse();
+    s_vibe_done = true;
+  }
+}
+
+// Still waiting for the vehicle to reach the user's stop, with the
+// arrival vibration on
+static bool prv_waiting_for_vibe(void) {
+  int32_t secs;
+  return settings_get_arrival_vibe() && !s_vibe_done &&
+         prv_secs_to_focus(time(NULL), &secs) && secs > 0;
 }
 
 // ---- Drawing ----
@@ -314,8 +356,15 @@ static void prv_stop_timers(void) {
   }
 }
 
+static void prv_reset_inactivity_timer(void);
+
 static void prv_inactivity_timeout(void *context) {
   s_inactivity_timer = NULL;
+  // Stay open while waiting to vibrate for the vehicle's arrival
+  if (prv_waiting_for_vibe()) {
+    prv_reset_inactivity_timer();
+    return;
+  }
   window_stack_remove(s_window, true);
 }
 
@@ -344,6 +393,7 @@ static void prv_selection_changed(MenuLayer *menu_layer, MenuIndex new_index,
 static void prv_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
   // The vehicle moves on with time even without new data
   if (s_menu_layer) layer_mark_dirty(menu_layer_get_layer(s_menu_layer));
+  if (s_has_route) prv_check_arrival();
 }
 
 // ---- Window ----
@@ -425,6 +475,8 @@ void route_window_push(const char *station, int index, const char *line, Transit
   text_copy_utf8(s_direction, direction, sizeof(s_direction));
   s_error[0] = '\0';
   s_has_route = false;
+  s_vibe_armed = false;
+  s_vibe_done = false;
   // Don't flash the previous route while this one loads
   course_clear();
 
@@ -449,6 +501,7 @@ void route_window_refresh(void) {
   }
   layer_mark_dirty(s_header_layer);
   prv_update_loading();
+  if (course_get_count() > 0) prv_check_arrival();
 }
 
 void route_window_show_error(const char *message) {

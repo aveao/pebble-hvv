@@ -599,6 +599,8 @@ function setMaxDeparturesLimit(items, limit) {
 }
 
 var BOLD_TEXT_PLATFORMS = ['emery', 'gabbro'];
+// Watches with a touchscreen, where tapping a departure opens its route
+var TOUCH_PLATFORMS = ['emery', 'gabbro'];
 
 // Remove settings items by messageKey (e.g. options only one platform supports)
 function removeConfigItems(items, messageKeys) {
@@ -618,12 +620,17 @@ Pebble.addEventListener('showConfiguration', function() {
   if (BOLD_TEXT_PLATFORMS.indexOf(getPlatform()) === -1) {
     removeConfigItems(configCopy, ['CONFIG_BOLD_TEXT']);
   }
+  // Only touch watches show routes
+  if (TOUCH_PLATFORMS.indexOf(getPlatform()) === -1) {
+    removeConfigItems(configCopy, ['CONFIG_ARRIVAL_VIBE']);
+  }
   var dynamicClay = new Clay(configCopy, null, { autoHandleEvents: false });
   Pebble.openURL(dynamicClay.generateUrl());
 });
 
 // Display settings the watch stores itself (see settings.c)
-var WATCH_SETTINGS = ['CONFIG_BOLD_TEXT', 'CONFIG_TOUCH_NAV', 'CONFIG_DIRECTION_ARROWS'];
+var WATCH_SETTINGS = ['CONFIG_BOLD_TEXT', 'CONFIG_TOUCH_NAV', 'CONFIG_DIRECTION_ARROWS',
+  'CONFIG_ARRIVAL_VIBE'];
 
 // Pick the watch-side settings out of Clay's result as 0/1, or null if none
 // are present (e.g. the bold toggle is hidden on most watches)

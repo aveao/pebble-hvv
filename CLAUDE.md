@@ -110,7 +110,7 @@ The build system uses waf (`wscript`). C sources are globbed from `src/c/**/*.c`
 - `src/c/modules/icons.c/.h` — Programmatic transit type icon drawing (no bitmap resources)
 - `src/c/modules/course.c/.h` — Stops of the shown route (`PBL_TOUCH` only, up to 64)
 - `src/c/modules/round.c/.h` — `round_inset()` for fitting rows to round screens
-- `src/c/modules/settings.c/.h` — Watch-side settings persisted in Storage: bold departure text (emery, gabbro), direction arrows (default on) and touch navigation (default on), sent from Clay as `CONFIG_BOLD_TEXT` / `CONFIG_DIRECTION_ARROWS` / `CONFIG_TOUCH_NAV`
+- `src/c/modules/settings.c/.h` — Watch-side settings persisted in Storage: bold departure text (emery, gabbro), direction arrows (default on), touch navigation (default on) and arrival vibration (touch watches, default off), sent from Clay as `CONFIG_BOLD_TEXT` / `CONFIG_DIRECTION_ARROWS` / `CONFIG_TOUCH_NAV` / `CONFIG_ARRIVAL_VIBE`
 
 ### JS side (phone)
 - `src/pkjs/index.js` — Clay config init, AppMessage bridge, demo data, response parsing. Keeps the departure list it last sent so a `REQUEST_COURSE` (station, row index, line) maps back to a trip

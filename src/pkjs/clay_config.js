@@ -120,6 +120,13 @@ module.exports = [
         "messageKey": "CONFIG_TOUCH_NAV",
         "label": "Touch navigation (touchscreen watches)",
         "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "CONFIG_ARRIVAL_VIBE",
+        "label": "Vibrate a minute before arrival",
+        "description": "While a departure's route is open, vibrate when it's a minute from your stop",
+        "defaultValue": false
       }
     ]
   },

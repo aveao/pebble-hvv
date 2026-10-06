@@ -4,10 +4,12 @@
 #define PERSIST_KEY_BOLD_TEXT 2
 #define PERSIST_KEY_TOUCH_NAV 3
 #define PERSIST_KEY_DIRECTION_ARROWS 4
+#define PERSIST_KEY_ARRIVAL_VIBE 5
 
 static bool s_bold_text;
 static bool s_touch_nav;
 static bool s_direction_arrows;
+static bool s_arrival_vibe;
 
 static void prv_apply_touch_nav(void) {
 #ifdef PBL_TOUCH
@@ -23,6 +25,8 @@ void settings_init(void) {
   prv_apply_touch_nav();
   s_direction_arrows = !persist_exists(PERSIST_KEY_DIRECTION_ARROWS) ||
                        persist_read_bool(PERSIST_KEY_DIRECTION_ARROWS);
+  s_arrival_vibe = persist_exists(PERSIST_KEY_ARRIVAL_VIBE) &&
+                   persist_read_bool(PERSIST_KEY_ARRIVAL_VIBE);
 }
 
 bool settings_get_bold_text(void) {
@@ -43,6 +47,16 @@ void settings_set_direction_arrows(bool enabled) {
   if (enabled == s_direction_arrows) return;
   s_direction_arrows = enabled;
   persist_write_bool(PERSIST_KEY_DIRECTION_ARROWS, enabled);
+}
+
+bool settings_get_arrival_vibe(void) {
+  return s_arrival_vibe;
+}
+
+void settings_set_arrival_vibe(bool enabled) {
+  if (enabled == s_arrival_vibe) return;
+  s_arrival_vibe = enabled;
+  persist_write_bool(PERSIST_KEY_ARRIVAL_VIBE, enabled);
 }
 
 bool settings_get_touch_nav(void) {
